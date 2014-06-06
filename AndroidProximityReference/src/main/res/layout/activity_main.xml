@@ -6,17 +6,42 @@
     tools:context=".MainActivity"
     tools:ignore="MergeRootFrame">
 
-    <TextView
-        android:id="@+id/title"
+    <EditText
+        android:id="@+id/username"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal|top"
-        android:text="Visible iBeacons" />
+        android:text="Michael Jordan" />
+
+    <TextView
+        android:id="@+id/currentLocation"
+        android:layout_below="@id/username"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:text="Current Location: " />
+
+    <TextView
+        android:id="@+id/previousLocations"
+        android:layout_below="@id/currentLocation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:text="Previous Locations: " />
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_below="@id/previousLocations"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:text="Visible iBeacons: " />
 
     <ScrollView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_below="@id/title">
+        android:layout_below="@id/title"
+        >
 
         <TableLayout
             android:id="@+id/beacon_table"

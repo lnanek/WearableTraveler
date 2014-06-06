@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActionBar;
 import android.app.Fragment;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +13,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.os.Build;
+import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -29,18 +31,28 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier
-{
+public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier {
     public static final String TAG = "MainActivity";
 
     IBeaconManager iBeaconManager;
-    Map<String,TableRow> rowMap = new HashMap<String,TableRow>();
+    Map<String, TableRow> rowMap = new HashMap<String, TableRow>();
+
+    private EditText username;
+    private TextView currentLocation;
+    private TextView previousLocations;
+
+    private HackathonBeacon currentBeacon;
+
+    private Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         IBeaconManager.LOG_DEBUG = true;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        username = (EditText) findViewById(R.id.username);
+        currentLocation = (TextView) findViewById(R.id.currentLocation);
+        previousLocations = (TextView) findViewById(R.id.previousLocations);
 
         iBeaconManager = IBeaconManager.getInstanceForApplication(this.getApplicationContext());
         iBeaconManager.bind(this);
@@ -65,13 +77,25 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     public void didRangeBeaconsInRegion(Collection<IBeacon> iBeacons, Region region) {
-        for (IBeacon iBeacon: iBeacons) {
+        for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
-            Log.d(TAG, "I see an iBeacon: "+iBeacon.getProximityUuid()+","+iBeacon.getMajor()+","+iBeacon.getMinor());
+            Log.d(TAG, "I see an iBeacon: " + iBeacon.getProximityUuid() + "," + iBeacon.getMajor() + "," + iBeacon.getMinor());
 
-            HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
-            String displayString = iBeacon.getProximityUuid()+" "+iBeacon.getMajor()+" "+iBeacon.getMinor()
-                    +(null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
+            final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
+            String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
+                    + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
+
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (null != foundHackathonBeacon && foundHackathonBeacon != currentBeacon) {
+                        currentBeacon = foundHackathonBeacon;
+                        currentLocation.setText("Current location: " + foundHackathonBeacon);
+                        previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
+                    }
+                }
+            });
+
 
             displayTableRow(iBeacon, displayString, false);
         }
@@ -80,16 +104,27 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     @Override
     public void iBeaconDataUpdate(IBeacon iBeacon, IBeaconData iBeaconData, DataProviderException e) {
         if (e != null) {
-            Log.d(TAG, "data fetch error:"+e);
+            Log.d(TAG, "data fetch error:" + e);
         }
         if (iBeaconData != null) {
 
-            Log.d(TAG, "I have an iBeacon with data: uuid="+iBeacon.getProximityUuid()+" major="+iBeacon.getMajor()+" minor="+iBeacon.getMinor()+" welcomeMessage="+iBeaconData.get("welcomeMessage"));
+            Log.d(TAG, "I have an iBeacon with data: uuid=" + iBeacon.getProximityUuid() + " major=" + iBeacon.getMajor() + " minor=" + iBeacon.getMinor() + " welcomeMessage=" + iBeaconData.get("welcomeMessage"));
 
-            HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
-            String displayString = iBeacon.getProximityUuid()+" "+iBeacon.getMajor()+" "+iBeacon.getMinor()
-                    +(null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
-                    +"\n"+"Welcome message:"+iBeaconData.get("welcomeMessage");
+            final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
+            String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
+                    + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
+                    + "\n" + "Welcome message:" + iBeaconData.get("welcomeMessage");
+
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (null != foundHackathonBeacon && foundHackathonBeacon != currentBeacon) {
+                        currentBeacon = foundHackathonBeacon;
+                        currentLocation.setText("Current location: " + foundHackathonBeacon);
+                        previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
+                    }
+                }
+            });
 
             displayTableRow(iBeacon, displayString, true);
         }
@@ -107,14 +142,13 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                     tr.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT));
                     rowMap.put(key, tr);
                     table.addView(tr);
-                }
-                else {
+                } else {
                     if (updateIfExists == false) {
                         return;
                     }
                 }
                 tr.removeAllViews();
-                TextView textView=new TextView(MainActivity.this);
+                TextView textView = new TextView(MainActivity.this);
                 textView.setText(displayString);
                 tr.addView(textView);
 
