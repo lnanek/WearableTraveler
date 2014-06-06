@@ -47,6 +47,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     private HackathonBeacon currentBeacon;
 
+    private Double previousDistance;
+
     private Handler handler = new Handler();
 
     private ProgressDialog progressDialog;
@@ -93,30 +95,62 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
 
-            updateServerAndFields(foundHackathonBeacon);
+            updateServerAndFields(foundHackathonBeacon, iBeacon);
 
             displayTableRow(iBeacon, displayString, false);
         }
     }
 
-    public void updateServerAndFields(final HackathonBeacon foundHackathonBeacon) {
+    public static String getProximityString(final int value) {
+        if (value == IBeacon.PROXIMITY_FAR ) {
+            return "FAR";
+        } else if (value == IBeacon.PROXIMITY_IMMEDIATE ) {
+            return "IMMEDIATE ";
+        } else if (value == IBeacon.PROXIMITY_NEAR ) {
+            return "NEAR";
+        }
+        return "UNKNOWN";
+    }
+
+    public void updateServerAndFields(
+            final HackathonBeacon foundHackathonBeacon,
+            final IBeacon beacon) {
         Log.d(TAG, "updateServerAndFields");
+        if ( null == foundHackathonBeacon || null == beacon ) {
+            return;
+        }
+
+        final boolean sameHackathonBeacon = null != currentBeacon
+                && currentBeacon == foundHackathonBeacon;
+        final boolean sameDistance = null != previousDistance
+                && previousDistance.equals(beacon.getAccuracy());
 
         handler.post(new Runnable() {
             @Override
             public void run() {
-                if (null != foundHackathonBeacon && foundHackathonBeacon != currentBeacon) {
+                if (!sameHackathonBeacon || !sameDistance) {
+
+                    if (!sameHackathonBeacon) {
+                        previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
+                        previousLocationsString = previousLocationsString + " " + foundHackathonBeacon;
+                    }
                     currentBeacon = foundHackathonBeacon;
-                    currentLocation.setText("Current location: " + foundHackathonBeacon);
-                    previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
-                    previousLocationsString = previousLocationsString + " " + foundHackathonBeacon;
+
+                    currentLocation.setText(
+                            "Current location: " + foundHackathonBeacon
+                            + "\nDistance: " + beacon.getAccuracy()
+                                    + "\nProximity: " + getProximityString(beacon.getProximity()));
+                    previousDistance = beacon.getAccuracy();
+
                     Log.d(TAG, "updating server...");
                     Toast.makeText(MainActivity.this,
                             "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
-
                     ServerRemoteClient.updateServer(username.getText().toString(),
                             foundHackathonBeacon.name(),
-                            previousLocationsString, MainActivity.this);
+                            previousLocationsString,
+                            beacon.getAccuracy(),
+                            getProximityString(beacon.getProximity()),
+                            MainActivity.this);
 
                 }
             }
@@ -137,7 +171,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
                     + "\n" + "Welcome message:" + iBeaconData.get("welcomeMessage");
 
-            updateServerAndFields(foundHackathonBeacon);
+            updateServerAndFields(foundHackathonBeacon, iBeacon);
 
             displayTableRow(iBeacon, displayString, true);
         }

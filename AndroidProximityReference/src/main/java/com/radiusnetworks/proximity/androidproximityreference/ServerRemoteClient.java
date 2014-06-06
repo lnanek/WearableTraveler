@@ -34,13 +34,16 @@ public class ServerRemoteClient {
             final String username,
             final String currentLocation,
             final String previousLocations,
+            final Double distance,
+            final String proximity,
             final MainActivity activity) {
         Log.d(TAG, "updateServer");
 
         final Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                updateServerOnSecondThread(username, currentLocation, previousLocations, activity);
+                updateServerOnSecondThread(username, currentLocation, previousLocations,
+                        distance, proximity, activity);
             }
         });
         thread.start();
@@ -51,6 +54,8 @@ public class ServerRemoteClient {
             final String username,
             final String currentLocation,
             final String previousLocations,
+            final Double distance,
+            final String proximity,
             final MainActivity activity) {
         Log.d(TAG, "updateServerOnSecondThread");
 
@@ -59,6 +64,8 @@ public class ServerRemoteClient {
                 + "?username=" + encodeValue(username)
                 + "&currentLocation=" + encodeValue(currentLocation)
                 + "&previousLocations=" + encodeValue(previousLocations)
+                + "&distance=" + encodeValue(Double.toString(distance))
+                + "&proximity=" + encodeValue(proximity)
         );
         HttpResponse response;
         try {
@@ -66,6 +73,8 @@ public class ServerRemoteClient {
             nameValuePairs.add(new BasicNameValuePair("username", username));
             nameValuePairs.add(new BasicNameValuePair("currentLocation", currentLocation));
             nameValuePairs.add(new BasicNameValuePair("previousLocations", previousLocations));
+            nameValuePairs.add(new BasicNameValuePair("distance", Double.toString(distance)));
+            nameValuePairs.add(new BasicNameValuePair("proximity", proximity));
             httpMethod.setEntity(new UrlEncodedFormEntity(nameValuePairs));
 
             response = httpclient.execute(httpMethod);
