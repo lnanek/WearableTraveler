@@ -3,6 +3,7 @@ package com.radiusnetworks.proximity.androidproximityreference;
 import android.app.Activity;
 import android.app.ActionBar;
 import android.app.Fragment;
+import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.RemoteException;
@@ -17,6 +18,7 @@ import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.radiusnetworks.ibeacon.IBeacon;
 import com.radiusnetworks.ibeacon.IBeaconConsumer;
@@ -41,9 +43,15 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     private TextView currentLocation;
     private TextView previousLocations;
 
+    private String previousLocationsString = "";
+
     private HackathonBeacon currentBeacon;
 
     private Handler handler = new Handler();
+
+    private ProgressDialog progressDialog;
+
+    private int updateCount = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,20 +93,34 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
 
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (null != foundHackathonBeacon && foundHackathonBeacon != currentBeacon) {
-                        currentBeacon = foundHackathonBeacon;
-                        currentLocation.setText("Current location: " + foundHackathonBeacon);
-                        previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
-                    }
-                }
-            });
-
+            updateServerAndFields(foundHackathonBeacon);
 
             displayTableRow(iBeacon, displayString, false);
         }
+    }
+
+    public void updateServerAndFields(final HackathonBeacon foundHackathonBeacon) {
+        Log.d(TAG, "updateServerAndFields");
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (null != foundHackathonBeacon && foundHackathonBeacon != currentBeacon) {
+                    currentBeacon = foundHackathonBeacon;
+                    currentLocation.setText("Current location: " + foundHackathonBeacon);
+                    previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
+                    previousLocationsString = previousLocationsString + " " + foundHackathonBeacon;
+                    Log.d(TAG, "updating server...");
+                    Toast.makeText(MainActivity.this,
+                            "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
+
+                    ServerRemoteClient.updateServer(username.getText().toString(),
+                            foundHackathonBeacon.name(),
+                            previousLocationsString, MainActivity.this);
+
+                }
+            }
+        });
     }
 
     @Override
@@ -115,16 +137,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
                     + "\n" + "Welcome message:" + iBeaconData.get("welcomeMessage");
 
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (null != foundHackathonBeacon && foundHackathonBeacon != currentBeacon) {
-                        currentBeacon = foundHackathonBeacon;
-                        currentLocation.setText("Current location: " + foundHackathonBeacon);
-                        previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
-                    }
-                }
-            });
+            updateServerAndFields(foundHackathonBeacon);
 
             displayTableRow(iBeacon, displayString, true);
         }
@@ -157,5 +170,13 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     }
 
+    public void onServerUpdated() {
+        Log.d(TAG, "onServerUpdated");
+    }
+
+    public void onServerUpdateError() {
+        Log.d(TAG, "onServerUpdateError");
+
+    }
 
 }
