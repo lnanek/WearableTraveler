@@ -4,37 +4,41 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity"
-    tools:ignore="MergeRootFrame" >
+    tools:ignore="MergeRootFrame">
 
     <TextView
+        android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Visible iBeacons"
-        android:id="@+id/title"
-        android:layout_gravity="center_horizontal|top" />
+        android:layout_gravity="center_horizontal|top"
+        android:text="Visible iBeacons" />
 
-    <TableLayout
-        android:id="@+id/beacon_table"
+    <ScrollView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_below="@id/title"
-        android:layout_gravity="center_horizontal">
+        android:layout_below="@id/title">
 
-        <TableRow
+        <TableLayout
+            android:id="@+id/beacon_table"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent"></TableRow>
-
-        <TableRow
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent">
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal">
 
             <TableRow
-                android:id="@+id/beacon_row"
                 android:layout_width="fill_parent"
-                android:layout_height="fill_parent"
-                android:layout_column="0">
-            </TableRow>
-        </TableRow>
+                android:layout_height="fill_parent"></TableRow>
 
-    </TableLayout>
+            <TableRow
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent">
+
+                <TableRow
+                    android:id="@+id/beacon_row"
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent"
+                    android:layout_column="0"></TableRow>
+            </TableRow>
+
+        </TableLayout>
+    </ScrollView>
 </RelativeLayout>

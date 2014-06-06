@@ -68,7 +68,11 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         for (IBeacon iBeacon: iBeacons) {
             iBeacon.requestData(this);
             Log.d(TAG, "I see an iBeacon: "+iBeacon.getProximityUuid()+","+iBeacon.getMajor()+","+iBeacon.getMinor());
-            String displayString = iBeacon.getProximityUuid()+" "+iBeacon.getMajor()+" "+iBeacon.getMinor()+"\n";
+
+            HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
+            String displayString = iBeacon.getProximityUuid()+" "+iBeacon.getMajor()+" "+iBeacon.getMinor()
+                    +(null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
+
             displayTableRow(iBeacon, displayString, false);
         }
     }
@@ -79,8 +83,14 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             Log.d(TAG, "data fetch error:"+e);
         }
         if (iBeaconData != null) {
+
             Log.d(TAG, "I have an iBeacon with data: uuid="+iBeacon.getProximityUuid()+" major="+iBeacon.getMajor()+" minor="+iBeacon.getMinor()+" welcomeMessage="+iBeaconData.get("welcomeMessage"));
-            String displayString = iBeacon.getProximityUuid()+" "+iBeacon.getMajor()+" "+iBeacon.getMinor()+"\n"+"Welcome message:"+iBeaconData.get("welcomeMessage");
+
+            HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
+            String displayString = iBeacon.getProximityUuid()+" "+iBeacon.getMajor()+" "+iBeacon.getMinor()
+                    +(null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
+                    +"\n"+"Welcome message:"+iBeaconData.get("welcomeMessage");
+
             displayTableRow(iBeacon, displayString, true);
         }
     }
