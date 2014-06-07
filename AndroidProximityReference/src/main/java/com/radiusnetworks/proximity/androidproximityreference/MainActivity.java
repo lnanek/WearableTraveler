@@ -292,7 +292,11 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     public void onIBeaconServiceConnect() {
-        Region region = new Region("MainActivityRanging", null, null, null);
+        Region region = new Region(
+                "MainActivityRanging",
+                "114A4DD8-5B2F-4800-A079-BDCB21392BE9",
+                null,
+                null);
         try {
             iBeaconManager.startRangingBeaconsInRegion(region);
             iBeaconManager.setRangeNotifier(this);
