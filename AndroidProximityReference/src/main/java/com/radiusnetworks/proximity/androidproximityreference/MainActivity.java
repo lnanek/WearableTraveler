@@ -120,8 +120,14 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         public void onSwipeBackOrVolumeDown() {
             Log.d(TAG, "onSwipeBackOrVolumeDown");
 
-            contentScreen.setVisibility(View.GONE);
-            debugScreen.setVisibility(View.VISIBLE);
+            final int currentDebugScreenVisibility = debugScreen.getVisibility();
+            if ( currentDebugScreenVisibility == View.GONE ) {
+                contentScreen.setVisibility(View.GONE);
+                debugScreen.setVisibility(View.VISIBLE);
+            } else {
+                contentScreen.setVisibility(View.VISIBLE);
+                debugScreen.setVisibility(View.GONE);
+            }
         }
 
         @Override
@@ -314,6 +320,12 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
                         final long currentTime = SystemClock.uptimeMillis();
                         final long remainingMs = DEPARTURE_DELAY_MS - (currentTime - timeStartUptimeMillis);
+
+                        if ( remainingMs <= 0 ) {
+                            countdown.setText("Departing...");
+                            return;
+                        }
+
                         final long remainingM = remainingMs / (60 * 1000);
                         final long remainingAfterM = remainingMs - (remainingM * 60 * 1000);
                         final long remainingS = remainingAfterM / 1000;
