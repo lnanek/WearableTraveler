@@ -70,4 +70,15 @@ public enum HackathonBeacon {
         return null;
     }
 
+    public static String getProximityString(final int value) {
+        if (value == IBeacon.PROXIMITY_FAR) {
+            return "FAR";
+        } else if (value == IBeacon.PROXIMITY_IMMEDIATE) {
+            return "IMMEDIATE ";
+        } else if (value == IBeacon.PROXIMITY_NEAR) {
+            return "NEAR";
+        }
+        return "UNKNOWN";
+    }
+
 }

@@ -363,7 +363,7 @@ public class MainActivity2 extends FragmentActivity implements ServerRemoteClien
     }
 
 
-    // updates the background images. Modification of Lance's updateFields function.
+    // updates the background images. Modification of Lance's updateCurrentLocation function.
     public void updateBackgrounds(
             final HackathonBeacon foundHackathonBeacon,
             final IBeacon beacon) {
@@ -558,7 +558,6 @@ public class MainActivity2 extends FragmentActivity implements ServerRemoteClien
 
         HackathonBeacon closestBeacon  = null;
         IBeacon closestIBeacon = null;
-        final List<DetectedBeacon> detectedBeaconList = new LinkedList<DetectedBeacon>();
         for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
 
@@ -568,7 +567,6 @@ public class MainActivity2 extends FragmentActivity implements ServerRemoteClien
 
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
             if ( null != foundHackathonBeacon ) {
-                detectedBeaconList.add(new DetectedBeacon(iBeacon));
 
                 if ( null == closestBeacon || iBeacon.getAccuracy() < closestIBeacon.getAccuracy() ) {
                     closestBeacon = foundHackathonBeacon;
@@ -589,17 +587,7 @@ public class MainActivity2 extends FragmentActivity implements ServerRemoteClien
 
         }
 
-        if (!detectedBeaconList.isEmpty()) {
-            Log.d(TAG, "updating server...");
-            Toast.makeText(MainActivity2.this,
-                    "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
-            ServerRemoteClient.updateServer(username.getText().toString(),
-                    null,
-                    detectedBeaconList,
-                    MainActivity2.this);
-        } else {
-            Log.d(TAG, "nothing found. not updating server...");
-        }
+
     }
 
     public static String getProximityString(final int value) {

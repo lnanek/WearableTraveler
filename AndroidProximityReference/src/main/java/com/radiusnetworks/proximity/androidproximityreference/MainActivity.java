@@ -15,7 +15,6 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.os.Build;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TableLayout;
@@ -82,7 +81,6 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     private int simulatedBeaconIndex = 0;
     private TextToSpeech tts;
     private String email;
-    private boolean firstDrawComplete;
     private String nickname;
     private boolean resumed;
     private boolean resumedEver;
@@ -173,12 +171,16 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
+        Log.d(TAG, "onCreate hasFocus = " + hasWindowFocus());
         //requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         screenWaker = new ScreenWaker(this);
         IBeaconManager.LOG_DEBUG = true;
+
+        Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD);
+        Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -202,17 +204,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         container = findViewById(R.id.container);
         logo = findViewById(R.id.logo);
 
-
-        logo.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener() {
-            @Override
-            public void onDraw() {
-                MainActivity.this.onDraw();
-            }
-        });
-
-
         iBeaconManager = IBeaconManager.getInstanceForApplication(this.getApplicationContext());
         iBeaconManager.bind(this);
+
 
         if (Build.MODEL.toUpperCase().contains("GLASS")) {
             Log.d(TAG, "Glass detected, tracking side touch pad events...");
@@ -316,21 +310,16 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
     }
 
-    protected void onDraw() {
-        firstDrawComplete = true;
-        Log.d(TAG, "onDraw hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
-    }
-
     @Override
     protected void onStart() {
-        Log.d(TAG, "onStart hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
+        Log.d(TAG, "onStart hasFocus = " + hasWindowFocus());
 
         super.onStart();
     }
 
     @Override
     protected void onResume() {
-        Log.d(TAG, "onResume hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
+        Log.d(TAG, "onResume hasFocus = " + hasWindowFocus());
 
         super.onResume();
         screenWaker.onResume();
@@ -342,7 +331,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     protected void onPause() {
-        Log.d(TAG, "onPause hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
+        Log.d(TAG, "onPause hasFocus = " + hasWindowFocus());
 
         super.onPause();
         resumed = false;
@@ -351,8 +340,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     protected void onStop() {
-        Log.d(TAG, "onStop hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
-
+        Log.d(TAG, "onStop hasFocus = " + hasWindowFocus());
         super.onStop();
 
         if (!isFinishing() && resumedEver) {
@@ -371,7 +359,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
+        Log.d(TAG, "onDestroy hasFocus = " + hasWindowFocus());
 
         super.onDestroy();
         iBeaconManager.unBind(this);
@@ -385,19 +373,12 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
     }
 
-    //final Gson gson = new Gson();
-
     @Override
     public void didRangeBeaconsInRegion(Collection<IBeacon> iBeacons, Region region) {
-
-        //final String json = gson.toJson(iBeacons);
-        //Log.d(TAG, "didRangeBeaconsInRegion json = " + json);
-
         Log.d(TAG, "didRangeBeaconsInRegion");
 
         HackathonBeacon closestBeacon = null;
         IBeacon closestIBeacon = null;
-        final List<DetectedBeacon> detectedBeaconList = new LinkedList<DetectedBeacon>();
         for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
 
@@ -406,50 +387,29 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
             if (null != foundHackathonBeacon) {
 
-                foundHackathonBeacon.proximity = getProximityString(iBeacon.getProximity());
+                foundHackathonBeacon.proximity = HackathonBeacon.getProximityString(iBeacon.getProximity());
                 foundHackathonBeacon.distanceMeters = iBeacon.getAccuracy();
                 foundHackathonBeacon.lastDetectedUptimeMillis = SystemClock.uptimeMillis();
-
-                detectedBeaconList.add(new DetectedBeacon(iBeacon));
 
                 if (null == closestBeacon || iBeacon.getAccuracy() < closestIBeacon.getAccuracy()) {
                     closestBeacon = foundHackathonBeacon;
                     closestIBeacon = iBeacon;
                 }
             }
-
-            String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
-                    + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
         }
 
         updateDebugDisplay();
 
         if (null != closestBeacon && null != closestIBeacon) {
-            updateFields(closestBeacon, closestIBeacon);
-        }
+            updateCurrentLocation(closestBeacon, closestIBeacon);
 
-        if (!detectedBeaconList.isEmpty()) {
             Log.d(TAG, "updating server " + (updateCount++));
-            //Toast.makeText(MainActivity.this,
-            //        "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
             ServerRemoteClient.updateServer(username.getText().toString(),
                     email,
-                    detectedBeaconList,
                     MainActivity.this);
         } else {
             Log.d(TAG, "nothing found. not updating server...");
         }
-    }
-
-    public static String getProximityString(final int value) {
-        if (value == IBeacon.PROXIMITY_FAR) {
-            return "FAR";
-        } else if (value == IBeacon.PROXIMITY_IMMEDIATE) {
-            return "IMMEDIATE ";
-        } else if (value == IBeacon.PROXIMITY_NEAR) {
-            return "NEAR";
-        }
-        return "UNKNOWN";
     }
 
     public void updateBackground() {
@@ -501,10 +461,14 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
     }
 
-    public void updateFields(
+    public void updateCurrentLocation(
             final HackathonBeacon foundHackathonBeacon,
             final IBeacon beacon) {
-        Log.d(TAG, "updateServerAndFields");
+        Log.d(TAG, "updateCurrentLocation");
+
+
+
+
         if (null == foundHackathonBeacon || null == beacon) {
             return;
         }
@@ -538,7 +502,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                     currentLocation.setText(
                             "Current: " + foundHackathonBeacon
                                     + " (" + beacon.getAccuracy()
-                                    + " " + getProximityString(beacon.getProximity()) + ")"
+                                    + " " + HackathonBeacon.getProximityString(beacon.getProximity()) + ")"
                     );
                     previousDistance = beacon.getAccuracy();
                 }
@@ -549,30 +513,6 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     @Override
     public void iBeaconDataUpdate(IBeacon iBeacon, IBeaconData iBeaconData, DataProviderException e) {
         Log.i(TAG, "iBeaconDataUpdate");
-
-        if (e != null) {
-            Log.d(TAG, "data fetch error:" + e);
-        }
-        if (iBeaconData != null) {
-
-            Log.d(TAG, "I have an iBeacon with data: uuid=" + iBeacon.getProximityUuid() + " major=" + iBeacon.getMajor() + " minor=" + iBeacon.getMinor() + " welcomeMessage=" + iBeaconData.get("welcomeMessage"));
-
-            final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
-            if ( null != foundHackathonBeacon ) {
-                Log.i(TAG, "iBeaconDataUpdate foundHackathonBeacon = " + foundHackathonBeacon.name());
-            }
-
-            /*
-            String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
-                    + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
-                    + "\n" + "Welcome message:" + iBeaconData.get("welcomeMessage");
-
-            //updateServerAndFields(foundHackathonBeacon, iBeacon);
-
-            updateDebugDisplay(iBeacon, displayString, true);
-            */
-        }
-
     }
 
     private void updateDebugDisplay() {

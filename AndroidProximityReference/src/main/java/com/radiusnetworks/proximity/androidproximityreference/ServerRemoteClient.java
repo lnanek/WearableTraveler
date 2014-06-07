@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.http.HttpEntity;
@@ -19,6 +20,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONObject;
 
 import android.os.Handler;
 import android.util.Log;
@@ -27,25 +29,26 @@ import com.google.gson.Gson;
 
 public class ServerRemoteClient {
 
-    private static final String TAG = ServerRemoteClient.class.getSimpleName();
-
-    private static final String URL = "http://gpop-server.com/american-airlines/post.php";
-
-    private static final Gson gson = new Gson();
-
     public static final Handler uiHandler = new Handler();
-
-    public static interface ServerRemoteClientListener {
-        public void onServerUpdated();
-        public void onServerUpdateError();
-    }
+    private static final String TAG = ServerRemoteClient.class.getSimpleName();
+    private static final String URL = "http://gpop-server.com/american-airlines/post.php";
+    private static final Gson gson = new Gson();
 
     public static void updateServer(
             final String username,
             final String email,
-            final List<DetectedBeacon> detectedBeaconList,
             final ServerRemoteClientListener activity) {
         Log.d(TAG, "updateServer");
+
+        final List<DetectedBeacon> detectedBeaconList = new LinkedList<DetectedBeacon>();
+        for (HackathonBeacon b : HackathonBeacon.values()) {
+            final DetectedBeacon o = new DetectedBeacon();
+            o.distanceMeters = b.distanceMeters;
+            o.proximity = b.proximity;
+            o.hackathonLocation = b.hackathonLocation;
+            o.lastDetectedUptimeMillis = b.lastDetectedUptimeMillis;
+            detectedBeaconList.add(o);
+        }
 
         final Thread thread = new Thread(new Runnable() {
             @Override
@@ -141,6 +144,12 @@ public class ServerRemoteClient {
             }
         }
         return sb.toString();
+    }
+
+    public static interface ServerRemoteClientListener {
+        public void onServerUpdated();
+
+        public void onServerUpdateError();
     }
 
 }
