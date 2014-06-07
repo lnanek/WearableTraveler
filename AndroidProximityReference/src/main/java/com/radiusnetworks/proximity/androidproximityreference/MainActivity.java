@@ -9,6 +9,7 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.RemoteException;
+import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -20,6 +21,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.os.Build;
 import android.view.ViewTreeObserver;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -165,11 +168,16 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     private TextToSpeech tts;
 
     private String email;
+    
+    private boolean firstDrawComplete;
+
+    private String nickname;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate hasFocus = " + hasWindowFocus());
-
+        Log.d(TAG, "onCreate hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
+        //requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         screenWaker = new ScreenWaker(this);
         IBeaconManager.LOG_DEBUG = true;
@@ -182,7 +190,10 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         username = (EditText) findViewById(R.id.username);
         email = DeviceEmail.get(this);
         if ("lnanek@gmail.com".equals(email)) {
-            username.setText("Dave-eroo Martinez");
+            username.setText("Dave Martinez");
+            nickname = "Dave";
+        } else {
+            nickname = "Michael";
         }
 
         debugScreen = findViewById(R.id.debugScreen);
@@ -192,10 +203,12 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         previousLocations = (TextView) findViewById(R.id.previousLocations);
         container = findViewById(R.id.container);
         logo = findViewById(R.id.logo);
+
+
         logo.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener() {
             @Override
             public void onDraw() {
-                onDraw();
+                MainActivity.this.onDraw();
             }
         });
 
@@ -242,7 +255,17 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         return super.dispatchKeyEvent(event);
     }
 
-    
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+
+        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+            detectorListener.onTap();
+
+            return true;
+        }
+
+        return super.dispatchTouchEvent(ev);
+    }
 
     @Override
     public void onIBeaconServiceConnect() {
@@ -255,28 +278,67 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
     }
 
+    private boolean resumed;
+
+    private Handler timerHandler = new Handler();
+
+    private void startTimerIfResumedAndFocused() {
+        if (!resumed || !hasWindowFocus()) {
+            if ( null == timeStartUptimeMillis ) {
+                timerHandler.removeCallbacksAndMessages(null);
+                timeStartUptimeMillis = SystemClock.uptimeMillis();
+
+                timerHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing() || null == timeStartUptimeMillis) {
+                            return;
+                        }
+
+                        final long currentTime = SystemClock.uptimeMillis();
+                        final long remainingMs = DEPARTURE_DELAY_MS - (currentTime - timeStartUptimeMillis);
+                        final long remainingM = remainingMs / (60 * 1000);
+                        final long remainingAfterM = remainingMs - (remainingM * 60 * 1000);
+                        final long remainingS = remainingAfterM / 1000;
+
+                        final String timeoutText = remainingM + ":" +
+                                (remainingS > 9 ? remainingS : ("0" + remainingS));
+
+                        countdown.setText(timeoutText);
+
+                        timerHandler.postDelayed(this, 500);
+                    }
+                });
+            }
+        }
+    }
+
     protected void onDraw() {
-        Log.d(TAG, "onDraw hasFocus = " + hasWindowFocus());
+        firstDrawComplete = true;
+        Log.d(TAG, "onDraw hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
     }
 
     @Override
     protected void onStart() {
-        Log.d(TAG, "onStart hasFocus = " + hasWindowFocus());
+        Log.d(TAG, "onStart hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
 
         super.onStart();
     }
 
     @Override
     protected void onResume() {
-        Log.d(TAG, "onResume hasFocus = " + hasWindowFocus());
+        Log.d(TAG, "onResume hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
 
         super.onResume();
         screenWaker.onResume();
+
+        resumed = true;
+        startTimerIfResumedAndFocused();
     }
 
     @Override
     protected void onPause() {
-        Log.d(TAG, "onPause hasFocus = " + hasWindowFocus());
+        Log.d(TAG, "onPause hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
 
         super.onPause();
         screenWaker.onPause();
@@ -284,7 +346,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     protected void onStop() {
-        Log.d(TAG, "onStop hasFocus = " + hasWindowFocus());
+        Log.d(TAG, "onStop hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
 
         super.onStop();
     }
@@ -294,11 +356,13 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         Log.d(TAG, "onWindowFocusChanged hasFocus = " + hasFocus);
 
         super.onWindowFocusChanged(hasFocus);
+
+        startTimerIfResumedAndFocused();
     }
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy hasFocus = " + hasWindowFocus());
+        Log.d(TAG, "onDestroy hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
 
         super.onDestroy();
         iBeaconManager.unBind(this);
@@ -540,14 +604,16 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     }
 
+    private static final boolean USE_SPEECH = false;
 
     private void speakOut() {
         Log.d(TAG, "speakOut");
 
-        String text = "Welcome Michael";
-        //String text = txtText.getText().toString();
+        String text = "Welcome " + nickname;
 
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        if ( USE_SPEECH ) {
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        }
     }
 
 }

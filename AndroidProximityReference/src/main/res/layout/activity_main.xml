@@ -25,11 +25,22 @@
                 android:layout_height="wrap_content"
                 android:src="@drawable/upper_left_logo_glass" />
 
-            <View
-                android:layout_width="0px"
-                android:layout_height="0px"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:text="Flight 133"
+                android:textColor="#FFF"
+                android:gravity="center"
+                />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="GATE A22"
+                android:textColor="#FFF"
+                android:gravity="center"
                 />
 
             <TextView
@@ -37,7 +48,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="3:00"
-                android:textColor="#FFF" />
+                android:textColor="#FFF"
+                />
         </LinearLayout>
 
     </LinearLayout>
