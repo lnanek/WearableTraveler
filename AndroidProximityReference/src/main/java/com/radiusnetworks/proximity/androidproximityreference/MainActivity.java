@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActionBar;
 import android.app.Fragment;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.RemoteException;
@@ -11,6 +12,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.os.Build;
@@ -40,6 +42,15 @@ import java.util.Map;
 public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier {
     public static final String TAG = "MainActivity";
 
+    // Loads swipe detector, separate class so loading it can be avoiding on
+    // non-Glass devices
+    // so that they don't crash
+    private static class GlassSetup {
+        private static Detector setup(final DetectorListener listener, Context context) {
+            return new SwipeDetector(listener, context);
+        }
+    }
+
     IBeaconManager iBeaconManager;
     Map<String, TableRow> rowMap = new HashMap<String, TableRow>();
 
@@ -62,6 +73,31 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     private ScreenWaker screenWaker;
 
+    private Detector swipes;
+
+    private DetectorListener detectorListener = new DetectorListener() {
+        @Override
+        public void onSwipeDownOrBack() {
+            Log.d(TAG, "onSwipeDownOrBack");
+            finish();
+        }
+
+        @Override
+        public void onSwipeForwardOrVolumeUp() {
+            Log.d(TAG, "onSwipeForwardOrVolumeUp");
+        }
+
+        @Override
+        public void onSwipeBackOrVolumeDown() {
+            Log.d(TAG, "onSwipeBackOrVolumeDown");
+        }
+
+        @Override
+        public void onTap() {
+            Log.d(TAG, "onTap");
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate hasFocus = " + hasWindowFocus());
@@ -79,6 +115,23 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
         iBeaconManager = IBeaconManager.getInstanceForApplication(this.getApplicationContext());
         iBeaconManager.bind(this);
+
+        if (Build.MODEL.toUpperCase().contains("GLASS")) {
+            Log.d(TAG, "Glass detected, tracking side touch pad events...");
+            swipes = GlassSetup.setup(detectorListener, this);
+        } else {
+            Log.d(TAG, "Not Glass: " + Build.MODEL);
+        }
+    }
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent event) {
+        Log.d(TAG, "onGenericMotionEvent ev = " + event);
+        if (null != swipes) {
+            swipes.onGenericMotionEvent(event);
+            return false;
+        }
+        return super.onGenericMotionEvent(event);
     }
 
     @Override
@@ -135,6 +188,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
         super.onDestroy();
         iBeaconManager.unBind(this);
+        swipes = null;
     }
 
     //final Gson gson = new Gson();
@@ -218,7 +272,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                 if (!sameHackathonBeacon || !sameDistance) {
 
                     if (HackathonBeacon.CHECK_IN == foundHackathonBeacon) {
-                        container.setBackground(null);
+                        container.setBackgroundResource(R.drawable.bg_checkin2);
 
                     } else if (HackathonBeacon.PARKING == foundHackathonBeacon) {
                         container.setBackgroundResource(R.drawable.bg_parking);
@@ -227,7 +281,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                         container.setBackgroundResource(R.drawable.bg_gate);
 
                     } else if (HackathonBeacon.SECURITY == foundHackathonBeacon) {
-                        container.setBackground(null);
+                        container.setBackgroundResource(R.drawable.bg_security);
 
                     } else if (HackathonBeacon.CLUB == foundHackathonBeacon) {
                         container.setBackgroundResource(R.drawable.bg_club);

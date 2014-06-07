@@ -13,7 +13,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal|top"
-        android:text="Michael Jordan" />
+        android:text="Michael Jordan"
+        android:enabled="false"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        />
 
     <TextView
         android:id="@+id/currentLocation"
