@@ -37,26 +37,7 @@ public class ServerRemoteClient {
 
     public static void updateServer(
             final String username,
-            final String currentLocation,
-            final String previousLocations,
-            final Double distance,
-            final String proximity,
-            final MainActivity activity) {
-        Log.d(TAG, "updateServer");
-
-        final Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                updateServerOnSecondThread(username, currentLocation, previousLocations,
-                        distance, proximity, activity);
-            }
-        });
-        thread.start();
-
-    }
-
-    public static void updateServer(
-            final String username,
+            final String email,
             final List<DetectedBeacon> detectedBeaconList,
             final MainActivity activity) {
         Log.d(TAG, "updateServer");
@@ -64,7 +45,7 @@ public class ServerRemoteClient {
         final Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                updateServerOnSecondThread(username, detectedBeaconList, activity);
+                updateServerOnSecondThread(username, email, detectedBeaconList, activity);
             }
         });
         thread.start();
@@ -73,6 +54,7 @@ public class ServerRemoteClient {
 
     private static void updateServerOnSecondThread(
             final String username,
+            final String email,
             final List<DetectedBeacon> detectedBeaconList,
             final MainActivity activity) {
         Log.d(TAG, "updateServerOnSecondThread");
@@ -80,6 +62,7 @@ public class ServerRemoteClient {
         HttpClient httpclient = new DefaultHttpClient();
         HttpPost httpMethod = new HttpPost(URL
                 + "?username=" + encodeValue(username)
+                + "&email=" + encodeValue(email)
         );
         HttpResponse response;
         try {
@@ -95,58 +78,6 @@ public class ServerRemoteClient {
             response = httpclient.execute(httpMethod);
             Log.d(TAG, "response status: " + response.getStatusLine().toString());
             HttpEntity entity = response.getEntity();
-
-            uiHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    activity.onServerUpdated();
-                }
-            });
-
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error downloading items", e);
-
-            uiHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    activity.onServerUpdateError();
-                }
-            });
-        }
-    }
-
-    private static void updateServerOnSecondThread(
-            final String username,
-            final String currentLocation,
-            final String previousLocations,
-            final Double distance,
-            final String proximity,
-            final MainActivity activity) {
-        Log.d(TAG, "updateServerOnSecondThread");
-
-        HttpClient httpclient = new DefaultHttpClient();
-        HttpPost httpMethod = new HttpPost(URL
-                + "?username=" + encodeValue(username)
-                + "&currentLocation=" + encodeValue(currentLocation)
-                + "&previousLocations=" + encodeValue(previousLocations)
-                + "&distance=" + encodeValue(Double.toString(distance))
-                + "&proximity=" + encodeValue(proximity)
-        );
-        HttpResponse response;
-        try {
-            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(3);
-            nameValuePairs.add(new BasicNameValuePair("username", username));
-            nameValuePairs.add(new BasicNameValuePair("currentLocation", currentLocation));
-            nameValuePairs.add(new BasicNameValuePair("previousLocations", previousLocations));
-            nameValuePairs.add(new BasicNameValuePair("distance", Double.toString(distance)));
-            nameValuePairs.add(new BasicNameValuePair("proximity", proximity));
-            httpMethod.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-
-            response = httpclient.execute(httpMethod);
-            Log.d(TAG, "response status: " + response.getStatusLine().toString());
-            HttpEntity entity = response.getEntity();
-
 
             uiHandler.post(new Runnable() {
                 @Override

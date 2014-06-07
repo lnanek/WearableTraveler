@@ -5,6 +5,7 @@ import android.app.ActionBar;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.RemoteException;
@@ -21,6 +22,8 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.glass.media.Sounds;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -77,6 +80,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     private int tapsThisBeacon = 0;
 
+    private AudioManager mAudioManager;
+
     private DetectorListener detectorListener = new DetectorListener() {
         @Override
         public void onSwipeDownOrBack() {
@@ -98,10 +103,13 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         public void onTap() {
             Log.d(TAG, "onTap");
 
+            mAudioManager.playSoundEffect(Sounds.SELECTED);
             tapsThisBeacon++;
             updateBackground();
         }
     };
+
+    private String email;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,7 +120,15 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         IBeaconManager.LOG_DEBUG = true;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
         username = (EditText) findViewById(R.id.username);
+        email = DeviceEmail.get(this);
+        if ("lnanek@gmail.com".equals(email)) {
+            username.setText("Dave-eroo Martinez");
+        }
+
         currentLocation = (TextView) findViewById(R.id.currentLocation);
         previousLocations = (TextView) findViewById(R.id.previousLocations);
         container = findViewById(R.id.container);
@@ -240,6 +256,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             Toast.makeText(MainActivity.this,
                     "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
             ServerRemoteClient.updateServer(username.getText().toString(),
+                    email,
                     detectedBeaconList,
                     MainActivity.this);
         } else {
@@ -260,21 +277,50 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     public void updateBackground() {
         if (HackathonBeacon.CHECK_IN == currentBeacon) {
-            container.setBackgroundResource(R.drawable.bg_checkin2);
+            if ( tapsThisBeacon == 0 ) {
+                container.setBackgroundResource(R.drawable.bg_checkin);
+            } else if ( tapsThisBeacon == 1 ) {
+                container.setBackgroundResource(R.drawable.bg_checkin2);
+            } else {
+                container.setBackgroundResource(R.drawable.bg_checkin3);
+            }
 
         } else if (HackathonBeacon.PARKING == currentBeacon) {
-            container.setBackgroundResource(
-                    tapsThisBeacon == 0 ? R.drawable.bg_parking : R.drawable.bg_parking2);
+            if ( tapsThisBeacon == 0 ) {
+                container.setBackgroundResource(R.drawable.bg_parking);
+            } else if ( tapsThisBeacon == 1 ) {
+                container.setBackgroundResource(R.drawable.bg_parking2);
+            } else {
+                container.setBackgroundResource(R.drawable.bg_parking3);
+            }
 
         } else if (HackathonBeacon.GATE_A22 == currentBeacon) {
-            container.setBackgroundResource(R.drawable.bg_gate);
+            if ( tapsThisBeacon == 0 ) {
+                container.setBackgroundResource(R.drawable.bg_gate);
+            } else if ( tapsThisBeacon == 1 ) {
+                container.setBackgroundResource(R.drawable.bg_gate3);
+            } else {
+                container.setBackgroundResource(R.drawable.bg_gate3);
+            }
 
         } else if (HackathonBeacon.SECURITY == currentBeacon) {
-            container.setBackgroundResource(
-                    tapsThisBeacon == 0 ? R.drawable.bg_security : R.drawable.bg_security2);
+            if ( tapsThisBeacon == 0 ) {
+                container.setBackgroundResource(R.drawable.bg_security);
+            } else if ( tapsThisBeacon == 1 ) {
+                container.setBackgroundResource(R.drawable.bg_security2);
+            } else {
+                container.setBackgroundResource(R.drawable.bg_security3);
+            }
 
         } else if (HackathonBeacon.CLUB == currentBeacon) {
-            container.setBackgroundResource(R.drawable.bg_club);
+            if ( tapsThisBeacon == 0 ) {
+                container.setBackgroundResource(R.drawable.bg_club);
+            } else if ( tapsThisBeacon == 1 ) {
+                container.setBackgroundResource(R.drawable.bg_club2);
+            } else {
+                container.setBackgroundResource(R.drawable.bg_club3);
+            }
+
         }
     }
 
@@ -300,8 +346,10 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                         previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
                         previousLocationsString = previousLocationsString + " " + foundHackathonBeacon;
                         tapsThisBeacon = 0;
+                        mAudioManager.playSoundEffect(Sounds.SUCCESS);
+                        currentBeacon = foundHackathonBeacon;
+
                     }
-                    currentBeacon = foundHackathonBeacon;
                     updateBackground();
 
                     currentLocation.setText(
