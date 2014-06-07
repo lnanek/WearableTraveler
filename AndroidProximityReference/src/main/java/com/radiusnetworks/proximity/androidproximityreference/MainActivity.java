@@ -9,7 +9,9 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.RemoteException;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,9 +43,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier {
+public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier,
+ TextToSpeech.OnInitListener {
+
     public static final String TAG = "MainActivity";
 
     // Loads swipe detector, separate class so loading it can be avoiding on
@@ -127,6 +132,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         ArrayList<IBeacon> iBeacons = new ArrayList<IBeacon>();
         IBeacon iBeacon1 = new IBeacon(HackathonBeacon.CHECK_IN.mUuid,
                 HackathonBeacon.CHECK_IN.mMajor, HackathonBeacon.CHECK_IN.mMinor);
+
         IBeacon iBeacon2 = new IBeacon("DF7E1C79-43E9-44FF-886F-1D1F7DA6997B".toLowerCase(),
                 1, 2);
         IBeacon iBeacon3 = new IBeacon("DF7E1C79-43E9-44FF-886F-1D1F7DA6997C".toLowerCase(),
@@ -145,6 +151,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     }
 
+    private TextToSpeech tts;
+
     private String email;
 
     @Override
@@ -157,6 +165,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        tts = new TextToSpeech(this, this);
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         username = (EditText) findViewById(R.id.username);
@@ -189,6 +198,27 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             return false;
         }
         return super.onGenericMotionEvent(event);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event)
+    {
+        if (event.getAction() == KeyEvent.ACTION_DOWN)
+        {
+            switch (event.getKeyCode())
+            {
+                case KeyEvent.KEYCODE_VOLUME_UP:
+                    detectorListener.onSwipeForwardOrVolumeUp();
+
+                    return true;
+                case KeyEvent.KEYCODE_VOLUME_DOWN:
+                    detectorListener.onSwipeBackOrVolumeDown();
+
+                    return true;
+            }
+        }
+
+        return super.dispatchKeyEvent(event);
     }
 
     @Override
@@ -246,6 +276,13 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         super.onDestroy();
         iBeaconManager.unBind(this);
         swipes = null;
+
+
+        // Don't forget to shutdown tts!
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+        }
     }
 
     //final Gson gson = new Gson();
@@ -452,6 +489,36 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     public void onServerUpdateError() {
         Log.d(TAG, "onServerUpdateError");
 
+    }
+
+    @Override
+    public void onInit(int status) {
+
+        if (status == TextToSpeech.SUCCESS) {
+
+            int result = tts.setLanguage(Locale.US);
+
+            if (result == TextToSpeech.LANG_MISSING_DATA
+                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TTS", "This Language is not supported");
+            } else {
+                //btnSpeak.setEnabled(true);
+                speakOut();
+            }
+
+        } else {
+            Log.e("TTS", "Initilization Failed!");
+        }
+
+    }
+
+
+    private void speakOut() {
+
+        String text = "Welcome Michael";
+        //String text = txtText.getText().toString();
+
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
     }
 
 }
