@@ -59,8 +59,11 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     private int updateCount = 1;
 
+    private ScreenWaker screenWaker;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        screenWaker = new ScreenWaker(this);
         IBeaconManager.LOG_DEBUG = true;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -81,6 +84,18 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        screenWaker.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        screenWaker.onPause();
     }
 
     @Override
