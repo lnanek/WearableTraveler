@@ -43,6 +43,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     IBeaconManager iBeaconManager;
     Map<String, TableRow> rowMap = new HashMap<String, TableRow>();
 
+    private View container;
     private EditText username;
     private TextView currentLocation;
     private TextView previousLocations;
@@ -70,7 +71,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         username = (EditText) findViewById(R.id.username);
         currentLocation = (TextView) findViewById(R.id.currentLocation);
         previousLocations = (TextView) findViewById(R.id.previousLocations);
-
+        container = findViewById(R.id.container);
         iBeaconManager = IBeaconManager.getInstanceForApplication(this.getApplicationContext());
         iBeaconManager.bind(this);
     }
@@ -114,6 +115,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
         Log.d(TAG, "didRangeBeaconsInRegion");
 
+        HackathonBeacon closestBeacon  = null;
+        IBeacon closestIBeacon = null;
         final List<DetectedBeacon> detectedBeaconList = new LinkedList<DetectedBeacon>();
         for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
@@ -125,14 +128,20 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
             if ( null != foundHackathonBeacon ) {
                 detectedBeaconList.add(new DetectedBeacon(iBeacon));
+
+                if ( null == closestBeacon || iBeacon.getAccuracy() < closestIBeacon.getAccuracy() ) {
+                    closestBeacon = foundHackathonBeacon;
+                    closestIBeacon = iBeacon;
+                }
             }
 
             String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
-
-            updateServerAndFields(foundHackathonBeacon, iBeacon);
-
             displayTableRow(iBeacon, displayString, false);
+        }
+
+        if (null != closestBeacon && null != closestIBeacon) {
+            updateFields(closestBeacon, closestIBeacon);
         }
 
         if (!detectedBeaconList.isEmpty()) {
@@ -158,7 +167,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         return "UNKNOWN";
     }
 
-    public void updateServerAndFields(
+    public void updateFields(
             final HackathonBeacon foundHackathonBeacon,
             final IBeacon beacon) {
         Log.d(TAG, "updateServerAndFields");
@@ -176,6 +185,25 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             public void run() {
                 if (!sameHackathonBeacon || !sameDistance) {
 
+                    if (HackathonBeacon.CHECK_IN == foundHackathonBeacon) {
+                        container.setBackground(null);
+
+                    } else if (HackathonBeacon.PARKING == foundHackathonBeacon) {
+                        container.setBackgroundResource(R.drawable.bg_parking);
+
+                    } else if (HackathonBeacon.GATE_A22 == foundHackathonBeacon) {
+                        container.setBackgroundResource(R.drawable.bg_gate);
+
+                    } else if (HackathonBeacon.SECURITY == foundHackathonBeacon) {
+                        container.setBackground(null);
+
+                    } else if (HackathonBeacon.CLUB == foundHackathonBeacon) {
+                        container.setBackgroundResource(R.drawable.bg_club);
+                    }
+
+
+
+
                     if (!sameHackathonBeacon) {
                         previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
                         previousLocationsString = previousLocationsString + " " + foundHackathonBeacon;
@@ -187,18 +215,6 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                             + "\nDistance: " + beacon.getAccuracy()
                                     + "\nProximity: " + getProximityString(beacon.getProximity()));
                     previousDistance = beacon.getAccuracy();
-
-                    /*
-                    Log.d(TAG, "updating server...");
-                    Toast.makeText(MainActivity.this,
-                            "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
-                    ServerRemoteClient.updateServer(username.getText().toString(),
-                            foundHackathonBeacon.name(),
-                            previousLocationsString,
-                            beacon.getAccuracy(),
-                            getProximityString(beacon.getProximity()),
-                            MainActivity.this);
-                    */
                 }
             }
         });
@@ -218,7 +234,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
                     + "\n" + "Welcome message:" + iBeaconData.get("welcomeMessage");
 
-            updateServerAndFields(foundHackathonBeacon, iBeacon);
+            //updateServerAndFields(foundHackathonBeacon, iBeacon);
 
             displayTableRow(iBeacon, displayString, true);
         }

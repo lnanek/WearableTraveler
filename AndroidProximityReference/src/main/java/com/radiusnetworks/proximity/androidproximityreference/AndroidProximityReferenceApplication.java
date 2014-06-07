@@ -82,7 +82,7 @@ public class AndroidProximityReferenceApplication extends Application implements
                 new NotificationCompat.Builder(this)
                         .setContentTitle("Proximity Reference Application")
                         .setContentText("An iBeacon is nearby.")
-                        .setSmallIcon(R.drawable.ic_launcher);
+                        .setSmallIcon(R.drawable.upper_left_logo_glass);
 
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
         stackBuilder.addNextIntent(new Intent(this, MainActivity.class));
