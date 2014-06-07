@@ -3,12 +3,17 @@ package com.radiusnetworks.proximity.androidproximityreference;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -16,12 +21,19 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.os.Build;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.airportvip.app.AVIPFont;
+import com.airportvip.app.AVIPFragment;
+import com.airportvip.app.AVIPUser;
+import com.airportvip.app.AVIPWeather;
 import com.google.android.glass.media.Sounds;
 
 import com.radiusnetworks.ibeacon.IBeacon;
@@ -32,6 +44,7 @@ import com.radiusnetworks.ibeacon.RangeNotifier;
 import com.radiusnetworks.ibeacon.Region;
 import com.radiusnetworks.ibeacon.client.DataProviderException;
 import com.radiusnetworks.proximity.ibeacon.IBeaconManager;
+import com.squareup.picasso.Picasso;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -40,10 +53,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier,
+public class MainActivity extends FragmentActivity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier,
         TextToSpeech.OnInitListener, ServerRemoteClient.ServerRemoteClientListener {
 
     private static final boolean USE_SPEECH = true;
+
+    private static final boolean LOG = false;
 
     public static final String TAG = "MainActivity";
 
@@ -85,6 +100,406 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     private boolean resumed;
     private boolean resumedEver;
     private Handler timerHandler = new Handler();
+
+    // SYSTEM VARIABLES
+    private SharedPreferences AVIP_temps; // SharedPreferences objects that store settings for the application.
+    private SharedPreferences.Editor AVIP_temps_editor; // SharedPreferences.Editor objects that are used for editing preferences.
+    private AVIPFragment avipFrag;
+    private LinearLayout fragmentDisplay, buttonDisplay;
+    private Boolean showFragment = false;
+    private String currentFragment = "WELCOME";
+
+    // CLASS VARIABLES
+    private AVIPUser vip;
+    private AVIPWeather vipWeather;
+
+    TextView departureTime;
+
+    private void chooseLayout(Boolean isDebug) {
+
+        // Use Lance's original layout
+        if (isDebug) { setContentView(R.layout.activity_main); }
+
+        // Use modified layout file and set up resources for modified layout.
+        else {
+
+            setContentView(R.layout.avip_main);
+
+            // INITIALIZE AVIPUser & AVIPWeather class.
+            vip = new AVIPUser();
+            vip.initializeVIP(); // Sets the VIP dummy stats.
+            vipWeather = new AVIPWeather();
+            vipWeather.initializeWeather(); // Sets the dummy weather stats.
+
+            // LAYOUT INITIALIZATION
+            setUpLayout(); // Sets up the layout for the activity.
+            setUpStickyBar(); // Sets up the top sticky bar.
+            setUpButtons(); // Sets up the buttons.
+            setUpBackground(currentFragment); // Sets up the background image.
+
+            welcomeVIP(); // Shows the first two frames.
+
+            // Starts countdown timer.
+            countDownToFlight();
+        }
+    }
+
+    // Countdown Timer.
+    private void countDownToFlight() {
+
+        new CountDownTimer(1800000, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+                departureTime.setText("0:" + millisUntilFinished / 1000 / 60);
+            }
+
+            public void onFinish() {
+                departureTime.setText("DEPARTED");
+            }
+        }.start();
+    }
+
+    public interface OnRefreshSelected {
+        public void refreshFragment(boolean flag);
+    }
+
+    private OnRefreshSelected onRefreshSelected;
+
+    /** ACTIVITY EXTENSION FUNCTIONALITY _______________________________________________________ **/
+
+    // Refreshes the fragment contents.
+    private void refreshFragment() {
+
+        FragmentManager fm = getSupportFragmentManager();
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+
+        ft.replace(R.id.avip_fragment_container, new AVIPFragment());
+
+        //ft.replace(R.id.avip_fragment, new AVIPFragment(), "avip_fragment");
+        ft.addToBackStack(null);
+
+        int count = fm.getBackStackEntryCount();
+        fm.popBackStackImmediate(count, 0);
+        ft.commit();
+
+    }
+
+    /** LAYOUT FUNCTIONALITY _______________________________________________________ **/
+
+    // displayFragment(): Displays/hides the fragment & button containers.
+    private void displayFragment(Boolean isShow, String fragment) {
+
+        // If the fragment is currently being displayed, the fragment is hidden.
+        if (isShow == true) {
+            fragmentDisplay.setVisibility(View.INVISIBLE); // Hides the fragment.
+            buttonDisplay.setVisibility(View.VISIBLE);
+            showFragment = false; // Indicates that the fragment is hidden.
+        }
+
+        // If the fragment is currently hidden, the fragment is displayed.
+        else {
+            fragmentDisplay.setVisibility(View.VISIBLE); // Displays the fragment.
+            buttonDisplay.setVisibility(View.INVISIBLE);
+            showFragment = true; // Indicates that the fragment is currently being displayed.
+        }
+    }
+
+    private void setUpBackground(String fragment) {
+
+        int activityBackground;
+
+        if (fragment.equals("WELCOME")) {
+            activityBackground = R.drawable.bg_parking_v2;
+        }
+
+        else {
+            activityBackground = R.drawable.bg_club;
+        }
+
+        ImageView avip_background = (ImageView) findViewById(R.id.avip_background);
+        Picasso.with(this).load(activityBackground).noFade().into(avip_background); // Loads the image into the ImageView object.
+    }
+
+
+    private void setUpLayout() {
+
+        int activityLayout = R.layout.avip_main; // Used to reference the application layout.
+        //setContentView(activityLayout); // Sets the layout for the current activity.
+
+        // References the fragment & button containers.
+        fragmentDisplay = (LinearLayout) findViewById(R.id.avip_fragment_container);
+        buttonDisplay = (LinearLayout) findViewById(R.id.avip_button_subcontainer);
+
+        // References the AVIPFragment class.
+        //avipFrag = (AVIPFragment) getSupportFragmentManager().findFragmentById(R.id.avip_fragment);
+    }
+
+    private void setUpStickyBar() {
+
+        // Loads the airline icon.
+        int flightIcon = R.drawable.upper_left_logo_glass; // American Airlines Logo.
+        ImageView avip_flight_icon = (ImageView) findViewById(R.id.avip_sticky_flight_icon);
+        Picasso.with(this).load(flightIcon).noFade().into(avip_flight_icon); // Loads the image into the ImageView object.
+
+        // Gate information.
+        departureTime = (TextView) findViewById(R.id.avip_sticky_departure);
+        TextView gateText = (TextView) findViewById(R.id.avip_sticky_gate);
+        TextView flightNumber = (TextView) findViewById(R.id.avip_sticky_flight_number);
+
+        // Sets sticky text properties.
+        flightNumber.setText(vip.getFlightNumber());
+        gateText.setText(vip.getGateNumber());
+        departureTime.setText(vip.getEtaDeparture());
+
+        // Sets custom font properties.
+        flightNumber.setTypeface(AVIPFont.getInstance(this).getTypeFace());
+        gateText.setTypeface(AVIPFont.getInstance(this).getTypeFace());
+        departureTime.setTypeface(AVIPFont.getInstance(this).getTypeFace());
+    }
+
+    private void setUpButtons() {
+
+        // Reference the button objects.
+        Button flightButton = (Button) findViewById(R.id.avip_flight_button);
+        Button wifiButton = (Button) findViewById(R.id.avip_wifi_button);
+        Button weatherButton = (Button) findViewById(R.id.avip_weather_button);
+        Button dealButton = (Button) findViewById(R.id.avip_deal_button);
+
+        // Set custom text.
+        flightButton.setTypeface(AVIPFont.getInstance(this).getTypeFace());
+        wifiButton.setTypeface(AVIPFont.getInstance(this).getTypeFace());
+        weatherButton.setTypeface(AVIPFont.getInstance(this).getTypeFace());
+        dealButton.setTypeface(AVIPFont.getInstance(this).getTypeFace());
+
+        flightButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                currentFragment = "FLIGHT";
+                updateFragmentText(currentFragment);
+                refreshFragment();
+                displayFragment(showFragment, currentFragment);
+            }
+        });
+
+        wifiButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                currentFragment = "WIFI";
+                updateFragmentText(currentFragment);
+                refreshFragment();
+                displayFragment(showFragment, currentFragment);
+            }
+        });
+
+        weatherButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                currentFragment = "WEATHER";
+                updateFragmentText(currentFragment);
+                refreshFragment();
+                displayFragment(showFragment, currentFragment);
+            }
+        });
+
+        dealButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                currentFragment = "WELCOME";
+                updateFragmentText(currentFragment);
+                refreshFragment();
+                displayFragment(showFragment, currentFragment);
+            }
+        });
+
+    }
+
+
+    /** PHYSICAL BUTTON FUNCTIONALITY __________________________________________________________ **/
+
+    // BACK KEY:
+    // onBackPressed(): Defines the action to take when the physical back button key is pressed.
+    @Override
+    public void onBackPressed() {
+
+        // Closes the fragment if currently being displayed.
+        if (showFragment) {
+            displayFragment(showFragment, currentFragment);
+        }
+
+        else {
+            finish(); // Finishes the activity.
+        }
+    }
+
+    /** ADDITIONAL FUNCTIONALITY _______________________________________________________________ **/
+
+
+    private void welcomeVIP() {
+
+        final int waitTime = 1500; // 1500 ms
+
+        // Displays the welcome frame.
+        currentFragment = "WELCOME";
+        updateFragmentText(currentFragment); // Update the fragment contents.
+        refreshFragment(); // Refresh the fragment.
+        displayFragment(showFragment, currentFragment); // Displays the fragment.
+
+        // Timer for the initial frame.
+        new CountDownTimer(waitTime, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+            }
+
+            public void onFinish() {
+
+                // Displays the ready frame.
+                currentFragment = "READY";
+                updateFragmentText(currentFragment); // Update the fragment contents.
+                refreshFragment(); // Refresh the fragment.
+                refreshFragment();
+            }
+
+        }.start();
+
+        // Timer for the second frame.
+        new CountDownTimer(3000, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+
+            }
+
+            public void onFinish() {
+
+                // Displays the ready frame.
+                displayFragment(showFragment, currentFragment); // Displays the fragment.
+            }
+
+        }.start();
+    }
+
+    private void updateFragmentText(String fragment) {
+
+        // Preference values.
+        String avip_line_1, avip_line_2, avip_line_3, avip_weather;
+        Boolean isWeather = false;
+
+        // Sets the preferences.
+        AVIP_temps = getSharedPreferences("avip_temps", Context.MODE_PRIVATE);
+        AVIP_temps_editor = AVIP_temps.edit();  // Sets up shared preferences for editing.
+
+        // Update the fragment texts.
+        if (fragment.equals("WELCOME")) {
+            avip_line_1 = "Welcome to " + vip.getAirportName() + " Airport,"  ;
+            avip_line_2 = vip.getVipName() + ".";
+            avip_line_3 = "";
+
+            AVIP_temps_editor.putBoolean("avip_weather_enabled", false); // Disables weather icon.
+        }
+
+        // Update the fragment texts.
+        else if (fragment.equals("READY")) {
+            avip_line_1 = "Please get your";
+            avip_line_2 = "boarding pass ready.";
+            avip_line_3 = "";
+
+            AVIP_temps_editor.putBoolean("avip_weather_enabled", false); // Disables weather icon.
+        }
+
+        else if (fragment.equals("FLIGHT")) {
+            avip_line_1 = vip.getDestinationName();
+            avip_line_2 = vip.getFlightNumber();
+            avip_line_3 = vip.getSeatNumber();
+
+            AVIP_temps_editor.putBoolean("avip_weather_enabled", false); // Disables weather icon.
+        }
+
+        else if (fragment.equals("WEATHER")) {
+            avip_line_1 = vipWeather.getArrivalName();
+            avip_line_2 = vipWeather.getArrivalTemp();
+            avip_line_3 = vipWeather.getArriveCurrentWeather();
+
+            AVIP_temps_editor.putBoolean("avip_weather_enabled", true); // Enable weather icon.
+        }
+
+        else if (fragment.equals("WIFI")) {
+            avip_line_1 = "NETWORK: SAY_guest";
+            avip_line_2 = "PASSWORD: sayernet";
+            avip_line_3 = "";
+
+            AVIP_temps_editor.putBoolean("avip_weather_enabled", false); // Disables weather icon.
+        }
+
+        else {
+            avip_line_1 = "Welcome to " + vip.getAirportName() + " Airport,"  ;
+            avip_line_2 = vip.getVipName() + ".";
+            avip_line_3 = "";
+
+            AVIP_temps_editor.putBoolean("avip_weather_enabled", false); // Disables weather icon.
+        }
+
+        AVIP_temps_editor.putString("avip_line_1", avip_line_1);
+        AVIP_temps_editor.putString("avip_line_2", avip_line_2);
+        AVIP_temps_editor.putString("avip_line_3", avip_line_3);
+        AVIP_temps_editor.commit(); // Saves the new preferences.
+    }
+
+
+
+    // updates the background images. Modification of Lance's updateFields function.
+    public void updateBackgrounds(
+            ) {
+        Log.d(TAG, "updateBackgrounds");
+
+
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+
+                    // Background image reference.
+                    int activityBackground = R.drawable.transparent_tile; // BLANK
+                    ImageView avip_background = (ImageView) findViewById(R.id.avip_background);
+
+                    if (HackathonBeacon.CHECK_IN == currentBeacon) {
+
+                        activityBackground = R.drawable.bg_checkin;
+                        Picasso.with(MainActivity.this).load(activityBackground).noFade().into(avip_background); // Loads the image into the ImageView object.
+
+                    } else if (HackathonBeacon.PARKING == currentBeacon) {
+
+                        activityBackground = R.drawable.bg_parking_v2;
+                        Picasso.with(MainActivity.this).load(activityBackground).noFade().into(avip_background); // Loads the image into the ImageView object.
+
+                    } else if (HackathonBeacon.GATE_A22 == currentBeacon) {
+
+                        activityBackground = R.drawable.bg_gate;
+                        Picasso.with(MainActivity.this).load(activityBackground).noFade().into(avip_background); // Loads the image into the ImageView object.
+
+                    } else if (HackathonBeacon.SECURITY == currentBeacon) {
+
+                        activityBackground = R.drawable.bg_security; // BLANK
+                        Picasso.with(MainActivity.this).load(activityBackground).noFade().into(avip_background); // Loads the image into the ImageView object.
+
+                    } else if (HackathonBeacon.CLUB == currentBeacon) {
+
+                        activityBackground = R.drawable.bg_club;
+                        Picasso.with(MainActivity.this).load(activityBackground).noFade().into(avip_background); // Loads the image into the ImageView object.
+                    }
+
+
+                }
+
+        });
+    }
+
     private DetectorListener detectorListener = new DetectorListener() {
         @Override
         public void onSwipeDownOrBack() {
@@ -176,12 +591,16 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         screenWaker = new ScreenWaker(this);
-        IBeaconManager.LOG_DEBUG = true;
+        IBeaconManager.LOG_DEBUG = LOG;
 
         Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD);
         Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD);
 
         super.onCreate(savedInstanceState);
+
+        /** HUH MODIFICATION ___________________________________________________________________ **/
+        // TODO chooseLayout(false);
+        //------------------------------------------------------------------------------------------
         setContentView(R.layout.activity_main);
 
         tts = new TextToSpeech(this, this);
@@ -190,8 +609,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         username = (EditText) findViewById(R.id.username);
         email = DeviceEmail.get(this);
         if ("lnanek@gmail.com".equals(email)) {
-            username.setText("Dave Martinez");
-            nickname = "Dave";
+            username.setText("Tony Hawk");
+            nickname = "Tony";
         } else {
             nickname = "Michael";
         }
@@ -377,31 +796,26 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     public void didRangeBeaconsInRegion(Collection<IBeacon> iBeacons, Region region) {
         Log.d(TAG, "didRangeBeaconsInRegion");
 
-        HackathonBeacon closestBeacon = null;
-        IBeacon closestIBeacon = null;
+        boolean found = false;
         for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
-
             Log.d(TAG, "I see an iBeacon: " + iBeacon.getProximityUuid() + "," + iBeacon.getMajor() + "," + iBeacon.getMinor());
-
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
             if (null != foundHackathonBeacon) {
-
+                found = true;
                 foundHackathonBeacon.proximity = HackathonBeacon.getProximityString(iBeacon.getProximity());
                 foundHackathonBeacon.distanceMeters = iBeacon.getAccuracy();
                 foundHackathonBeacon.lastDetectedUptimeMillis = SystemClock.uptimeMillis();
-
-                if (null == closestBeacon || iBeacon.getAccuracy() < closestIBeacon.getAccuracy()) {
-                    closestBeacon = foundHackathonBeacon;
-                    closestIBeacon = iBeacon;
-                }
             }
         }
 
         updateDebugDisplay();
 
-        if (null != closestBeacon && null != closestIBeacon) {
-            updateCurrentLocation(closestBeacon, closestIBeacon);
+        /** HUH MODIFICATION **/
+        //updateBackgrounds();
+
+        if (found) {
+            updateCurrentLocation();
 
             Log.d(TAG, "updating server " + (updateCount++));
             ServerRemoteClient.updateServer(username.getText().toString(),
@@ -435,7 +849,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             if (tapsThisBeacon == 0) {
                 container.setBackgroundResource(R.drawable.bg_gate);
             } else if (tapsThisBeacon == 1) {
-                container.setBackgroundResource(R.drawable.bg_gate3);
+                container.setBackgroundResource(R.drawable.bg_gate2);
             } else {
                 container.setBackgroundResource(R.drawable.bg_gate3);
             }
@@ -461,22 +875,52 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
     }
 
-    public void updateCurrentLocation(
-            final HackathonBeacon foundHackathonBeacon,
-            final IBeacon beacon) {
+    public HackathonBeacon getNearest(final Long maxAgeAllowed) {
+        final long now = SystemClock.uptimeMillis();
+
+        HackathonBeacon closestBeacon = null;
+        for( HackathonBeacon beacon : HackathonBeacon.values() ) {
+            if ( null == beacon.lastDetectedUptimeMillis ) {
+                continue;
+            }
+
+            final long age = now - beacon.lastDetectedUptimeMillis;
+            if ( null != maxAgeAllowed && age > maxAgeAllowed ) {
+                continue;
+            }
+
+            if ( null == closestBeacon ) {
+                closestBeacon = beacon;
+                continue;
+            }
+
+            if ( beacon.distanceMeters < closestBeacon.distanceMeters ) {
+                closestBeacon = beacon;
+            }
+        }
+
+
+        Log.d(TAG, "getNearest returning = " + closestBeacon);
+        return closestBeacon;
+    }
+
+    public void updateCurrentLocation() {
         Log.d(TAG, "updateCurrentLocation");
 
+        HackathonBeacon nearestCandidate = getNearest(new Long(15 * 1000));
+        //if ( null == nearestCandidate ) {
+        //    nearestCandidate = getNearest(null);
+        //}
+        final HackathonBeacon nearest = nearestCandidate;
 
-
-
-        if (null == foundHackathonBeacon || null == beacon) {
+        if (null == nearest ) {
             return;
         }
 
         final boolean sameHackathonBeacon = null != currentBeacon
-                && currentBeacon == foundHackathonBeacon;
+                && currentBeacon == nearest;
         final boolean sameDistance = null != previousDistance
-                && previousDistance.equals(beacon.getAccuracy());
+                && previousDistance.equals(nearest.distanceMeters);
 
         handler.post(new Runnable() {
             @Override
@@ -484,14 +928,14 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                 if (!sameHackathonBeacon || !sameDistance) {
 
                     if (!sameHackathonBeacon) {
-                        previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
-                        previousLocationsString = previousLocationsString + " " + foundHackathonBeacon;
+                        previousLocations.setText(previousLocations.getText() + " " + nearest.name());
+                        previousLocationsString = previousLocationsString + " " + nearest.name();
                         tapsThisBeacon = 0;
                         mAudioManager.playSoundEffect(Sounds.SUCCESS);
-                        currentBeacon = foundHackathonBeacon;
+                        currentBeacon = nearest;
 
                         final Toast toast = Toast.makeText(MainActivity.this,
-                                "Detected " + foundHackathonBeacon.name(),
+                                "Detected " + nearest.name(),
                                 Toast.LENGTH_SHORT);
                         toast.setGravity(Gravity.BOTTOM, 0, 0);
                         toast.show();
@@ -500,11 +944,11 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                     updateBackground();
 
                     currentLocation.setText(
-                            "Current: " + foundHackathonBeacon
-                                    + " (" + beacon.getAccuracy()
-                                    + " " + HackathonBeacon.getProximityString(beacon.getProximity()) + ")"
+                            "Current: " + nearest
+                                    + " (" + nearest.distanceMeters
+                                    + " " + nearest.proximity + ")"
                     );
-                    previousDistance = beacon.getAccuracy();
+                    previousDistance = nearest.distanceMeters;
                 }
             }
         });
