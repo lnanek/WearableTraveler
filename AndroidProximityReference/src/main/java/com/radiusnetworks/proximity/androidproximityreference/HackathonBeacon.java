@@ -24,10 +24,19 @@ public enum HackathonBeacon {
 
     public int mMinor;
 
+    public Double distanceMeters;
+
+    public String proximity;
+
+    public Long lastDetectedUptimeMillis;
+
+    public String hackathonLocation;
+
     HackathonBeacon(final String uuid, final int major, final int minor) {
         mUuid = uuid;
         mMajor = major;
         mMinor = minor;
+        hackathonLocation = name();
     }
 
     public static HackathonBeacon findMatching(IBeacon iBeacon) {

@@ -1,8 +1,6 @@
 package com.radiusnetworks.proximity.androidproximityreference;
 
 import android.app.Activity;
-import android.app.ActionBar;
-import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.media.AudioManager;
@@ -14,15 +12,10 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.os.Build;
 import android.view.ViewTreeObserver;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TableLayout;
@@ -31,8 +24,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.glass.media.Sounds;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import com.radiusnetworks.ibeacon.IBeacon;
 import com.radiusnetworks.ibeacon.IBeaconConsumer;
@@ -43,18 +34,21 @@ import com.radiusnetworks.ibeacon.Region;
 import com.radiusnetworks.ibeacon.client.DataProviderException;
 import com.radiusnetworks.proximity.ibeacon.IBeaconManager;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier,
- TextToSpeech.OnInitListener, ServerRemoteClient.ServerRemoteClientListener {
+        TextToSpeech.OnInitListener, ServerRemoteClient.ServerRemoteClientListener {
+
+    private static final boolean USE_SPEECH = true;
 
     public static final String TAG = "MainActivity";
+
+    private static final int DEPARTURE_DELAY_MS = 3 * 60 * 1000;
 
     // Loads swipe detector, separate class so loading it can be avoiding on
     // non-Glass devices
@@ -66,42 +60,33 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     }
 
     IBeaconManager iBeaconManager;
-    Map<String, TableRow> rowMap = new HashMap<String, TableRow>();
-
     private View container;
     private View logo;
     private EditText username;
     private TextView currentLocation;
     private TextView previousLocations;
-
     private View debugScreen;
     private TextView countdown;
     private View contentScreen;
-
     private String previousLocationsString = "";
-
     private HackathonBeacon currentBeacon;
-
     private Double previousDistance;
-
     private Handler handler = new Handler();
-
     private ProgressDialog progressDialog;
-
     private int updateCount = 1;
-
     private ScreenWaker screenWaker;
-
     private Detector swipes;
-
     private int tapsThisBeacon = 0;
-
     private AudioManager mAudioManager;
-
-    private static final int DEPARTURE_DELAY_MS = 3 * 60 * 1000;
-
     private Long timeStartUptimeMillis;
-
+    private int simulatedBeaconIndex = 0;
+    private TextToSpeech tts;
+    private String email;
+    private boolean firstDrawComplete;
+    private String nickname;
+    private boolean resumed;
+    private boolean resumedEver;
+    private Handler timerHandler = new Handler();
     private DetectorListener detectorListener = new DetectorListener() {
         @Override
         public void onSwipeDownOrBack() {
@@ -121,7 +106,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             Log.d(TAG, "onSwipeBackOrVolumeDown");
 
             final int currentDebugScreenVisibility = debugScreen.getVisibility();
-            if ( currentDebugScreenVisibility == View.GONE ) {
+            if (currentDebugScreenVisibility == View.GONE) {
                 contentScreen.setVisibility(View.GONE);
                 debugScreen.setVisibility(View.VISIBLE);
             } else {
@@ -147,8 +132,6 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
     };
 
-    private int simulatedBeaconIndex = 0;
-
     public void startSimulation() {
 
         ArrayList<IBeacon> iBeacons = new ArrayList<IBeacon>();
@@ -165,7 +148,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         IBeacon iBeacon1 = new IBeacon(simulatedBeacon.mUuid,
                 simulatedBeacon.mMajor, simulatedBeacon.mMinor);
         simulatedBeaconIndex++;
-        if ( simulatedBeaconIndex >= HackathonBeacon.values().length) {
+        if (simulatedBeaconIndex >= HackathonBeacon.values().length) {
             simulatedBeaconIndex = 0;
         }
 
@@ -187,14 +170,6 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         //((YourBeaconSimulatorClass) IBeaconManager.getBeaconSimulator()).createTimedSimulatedBeacons();
 
     }
-
-    private TextToSpeech tts;
-
-    private String email;
-    
-    private boolean firstDrawComplete;
-
-    private String nickname;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -245,6 +220,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         } else {
             Log.d(TAG, "Not Glass: " + Build.MODEL);
         }
+
+        updateDebugDisplay();
     }
 
     @Override
@@ -258,12 +235,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     }
 
     @Override
-    public boolean dispatchKeyEvent(KeyEvent event)
-    {
-        if (event.getAction() == KeyEvent.ACTION_DOWN)
-        {
-            switch (event.getKeyCode())
-            {
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_VOLUME_UP:
                     detectorListener.onSwipeForwardOrVolumeUp();
 
@@ -305,13 +279,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
     }
 
-    private boolean resumed;
-
-    private Handler timerHandler = new Handler();
-
     private void startTimerIfResumedAndFocused() {
         if (!resumed || !hasWindowFocus()) {
-            if ( null == timeStartUptimeMillis ) {
+            if (null == timeStartUptimeMillis) {
                 timerHandler.removeCallbacksAndMessages(null);
                 timeStartUptimeMillis = SystemClock.uptimeMillis();
 
@@ -325,7 +295,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                         final long currentTime = SystemClock.uptimeMillis();
                         final long remainingMs = DEPARTURE_DELAY_MS - (currentTime - timeStartUptimeMillis);
 
-                        if ( remainingMs <= 0 ) {
+                        if (remainingMs <= 0) {
                             countdown.setText("Departing...");
                             return;
                         }
@@ -357,8 +327,6 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
         super.onStart();
     }
-
-    private boolean resumedEver;
 
     @Override
     protected void onResume() {
@@ -427,21 +395,24 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
         Log.d(TAG, "didRangeBeaconsInRegion");
 
-        HackathonBeacon closestBeacon  = null;
+        HackathonBeacon closestBeacon = null;
         IBeacon closestIBeacon = null;
         final List<DetectedBeacon> detectedBeaconList = new LinkedList<DetectedBeacon>();
         for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
 
-
-
             Log.d(TAG, "I see an iBeacon: " + iBeacon.getProximityUuid() + "," + iBeacon.getMajor() + "," + iBeacon.getMinor());
 
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
-            if ( null != foundHackathonBeacon ) {
+            if (null != foundHackathonBeacon) {
+
+                foundHackathonBeacon.proximity = getProximityString(iBeacon.getProximity());
+                foundHackathonBeacon.distanceMeters = iBeacon.getAccuracy();
+                foundHackathonBeacon.lastDetectedUptimeMillis = SystemClock.uptimeMillis();
+
                 detectedBeaconList.add(new DetectedBeacon(iBeacon));
 
-                if ( null == closestBeacon || iBeacon.getAccuracy() < closestIBeacon.getAccuracy() ) {
+                if (null == closestBeacon || iBeacon.getAccuracy() < closestIBeacon.getAccuracy()) {
                     closestBeacon = foundHackathonBeacon;
                     closestIBeacon = iBeacon;
                 }
@@ -449,8 +420,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
             String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
-            displayTableRow(iBeacon, displayString, false);
         }
+
+        updateDebugDisplay();
 
         if (null != closestBeacon && null != closestIBeacon) {
             updateFields(closestBeacon, closestIBeacon);
@@ -470,11 +442,11 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     }
 
     public static String getProximityString(final int value) {
-        if (value == IBeacon.PROXIMITY_FAR ) {
+        if (value == IBeacon.PROXIMITY_FAR) {
             return "FAR";
-        } else if (value == IBeacon.PROXIMITY_IMMEDIATE ) {
+        } else if (value == IBeacon.PROXIMITY_IMMEDIATE) {
             return "IMMEDIATE ";
-        } else if (value == IBeacon.PROXIMITY_NEAR ) {
+        } else if (value == IBeacon.PROXIMITY_NEAR) {
             return "NEAR";
         }
         return "UNKNOWN";
@@ -482,45 +454,45 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     public void updateBackground() {
         if (HackathonBeacon.CHECK_IN == currentBeacon) {
-            if ( tapsThisBeacon == 0 ) {
+            if (tapsThisBeacon == 0) {
                 container.setBackgroundResource(R.drawable.bg_checkin);
-            } else if ( tapsThisBeacon == 1 ) {
+            } else if (tapsThisBeacon == 1) {
                 container.setBackgroundResource(R.drawable.bg_checkin2);
             } else {
                 container.setBackgroundResource(R.drawable.bg_checkin3);
             }
 
         } else if (HackathonBeacon.PARKING == currentBeacon) {
-            if ( tapsThisBeacon == 0 ) {
+            if (tapsThisBeacon == 0) {
                 container.setBackgroundResource(R.drawable.bg_parking);
-            } else if ( tapsThisBeacon == 1 ) {
+            } else if (tapsThisBeacon == 1) {
                 container.setBackgroundResource(R.drawable.bg_parking2);
             } else {
                 container.setBackgroundResource(R.drawable.bg_parking3);
             }
 
         } else if (HackathonBeacon.GATE_A22 == currentBeacon) {
-            if ( tapsThisBeacon == 0 ) {
+            if (tapsThisBeacon == 0) {
                 container.setBackgroundResource(R.drawable.bg_gate);
-            } else if ( tapsThisBeacon == 1 ) {
+            } else if (tapsThisBeacon == 1) {
                 container.setBackgroundResource(R.drawable.bg_gate3);
             } else {
                 container.setBackgroundResource(R.drawable.bg_gate3);
             }
 
         } else if (HackathonBeacon.SECURITY == currentBeacon) {
-            if ( tapsThisBeacon == 0 ) {
+            if (tapsThisBeacon == 0) {
                 container.setBackgroundResource(R.drawable.bg_security);
-            } else if ( tapsThisBeacon == 1 ) {
+            } else if (tapsThisBeacon == 1) {
                 container.setBackgroundResource(R.drawable.bg_security2);
             } else {
                 container.setBackgroundResource(R.drawable.bg_security3);
             }
 
         } else if (HackathonBeacon.CLUB == currentBeacon) {
-            if ( tapsThisBeacon == 0 ) {
+            if (tapsThisBeacon == 0) {
                 container.setBackgroundResource(R.drawable.bg_club);
-            } else if ( tapsThisBeacon == 1 ) {
+            } else if (tapsThisBeacon == 1) {
                 container.setBackgroundResource(R.drawable.bg_club2);
             } else {
                 container.setBackgroundResource(R.drawable.bg_club3);
@@ -533,7 +505,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             final HackathonBeacon foundHackathonBeacon,
             final IBeacon beacon) {
         Log.d(TAG, "updateServerAndFields");
-        if ( null == foundHackathonBeacon || null == beacon ) {
+        if (null == foundHackathonBeacon || null == beacon) {
             return;
         }
 
@@ -565,8 +537,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
                     currentLocation.setText(
                             "Current: " + foundHackathonBeacon
-                            + " (" + beacon.getAccuracy()
-                                    + " " + getProximityString(beacon.getProximity())+ ")");
+                                    + " (" + beacon.getAccuracy()
+                                    + " " + getProximityString(beacon.getProximity()) + ")"
+                    );
                     previousDistance = beacon.getAccuracy();
                 }
             }
@@ -575,6 +548,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     public void iBeaconDataUpdate(IBeacon iBeacon, IBeaconData iBeaconData, DataProviderException e) {
+        Log.i(TAG, "iBeaconDataUpdate");
+
         if (e != null) {
             Log.d(TAG, "data fetch error:" + e);
         }
@@ -583,38 +558,52 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             Log.d(TAG, "I have an iBeacon with data: uuid=" + iBeacon.getProximityUuid() + " major=" + iBeacon.getMajor() + " minor=" + iBeacon.getMinor() + " welcomeMessage=" + iBeaconData.get("welcomeMessage"));
 
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
+            if ( null != foundHackathonBeacon ) {
+                Log.i(TAG, "iBeaconDataUpdate foundHackathonBeacon = " + foundHackathonBeacon.name());
+            }
+
+            /*
             String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name())
                     + "\n" + "Welcome message:" + iBeaconData.get("welcomeMessage");
 
             //updateServerAndFields(foundHackathonBeacon, iBeacon);
 
-            displayTableRow(iBeacon, displayString, true);
+            updateDebugDisplay(iBeacon, displayString, true);
+            */
         }
+
     }
 
-    private void displayTableRow(final IBeacon iBeacon, final String displayString, final boolean updateIfExists) {
+    private void updateDebugDisplay() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 TableLayout table = (TableLayout) findViewById(R.id.beacon_table);
-                String key = iBeacon.getProximity() + "-" + iBeacon.getMajor() + "-" + iBeacon.getMinor();
-                TableRow tr = (TableRow) rowMap.get(key);
-                if (tr == null) {
+                table.removeAllViews();
+
+                for( HackathonBeacon hackathonBeacon : HackathonBeacon.values() ) {
+
+                    TableRow tr = new TableRow(MainActivity.this);
                     tr = new TableRow(MainActivity.this);
                     tr.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT));
-                    rowMap.put(key, tr);
                     table.addView(tr);
-                } else {
-                    if (updateIfExists == false) {
-                        return;
-                    }
-                }
-                tr.removeAllViews();
-                TextView textView = new TextView(MainActivity.this);
-                textView.setText(displayString);
-                tr.addView(textView);
 
+                    TextView textView = new TextView(MainActivity.this);
+                    if (null == hackathonBeacon.lastDetectedUptimeMillis) {
+                        textView.setText(hackathonBeacon.name() + " (NOT SEEN YET)");
+                    } else {
+                        DecimalFormat df = new DecimalFormat("#.00");
+                        String distance = df.format(hackathonBeacon.distanceMeters);
+
+                        textView.setText(hackathonBeacon.name() + " "
+                                + hackathonBeacon.proximity + " "
+                                + distance + "m "
+                                + "at " + hackathonBeacon.lastDetectedUptimeMillis
+                        );
+                    }
+                    tr.addView(textView);
+                }
             }
         });
 
@@ -651,14 +640,12 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     }
 
-    private static final boolean USE_SPEECH = true;
-
     private void speakOut() {
         Log.d(TAG, "speakOut");
 
         String text = "Welcome " + nickname;
 
-        if ( USE_SPEECH ) {
+        if (USE_SPEECH) {
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
         }
     }
