@@ -8,4 +8,6 @@ public interface DetectorListener {
     void onSwipeBackOrVolumeDown();
 
     void onTap();
+
+    void onTwoTap();
 }

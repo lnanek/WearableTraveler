@@ -36,6 +36,7 @@ import com.radiusnetworks.ibeacon.Region;
 import com.radiusnetworks.ibeacon.client.DataProviderException;
 import com.radiusnetworks.proximity.ibeacon.IBeaconManager;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -92,11 +93,15 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         @Override
         public void onSwipeForwardOrVolumeUp() {
             Log.d(TAG, "onSwipeForwardOrVolumeUp");
+
+            startSimulation();
         }
 
         @Override
         public void onSwipeBackOrVolumeDown() {
             Log.d(TAG, "onSwipeBackOrVolumeDown");
+
+            startSimulation();
         }
 
         @Override
@@ -107,7 +112,38 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             tapsThisBeacon++;
             updateBackground();
         }
+
+        @Override
+        public void onTwoTap() {
+            Log.d(TAG, "onTwoTap");
+
+            startSimulation();
+        }
     };
+
+    public void startSimulation() {
+        Toast.makeText(MainActivity.this, "Using simulator...", Toast.LENGTH_LONG).show();
+
+        ArrayList<IBeacon> iBeacons = new ArrayList<IBeacon>();
+        IBeacon iBeacon1 = new IBeacon(HackathonBeacon.CHECK_IN.mUuid,
+                HackathonBeacon.CHECK_IN.mMajor, HackathonBeacon.CHECK_IN.mMinor);
+        IBeacon iBeacon2 = new IBeacon("DF7E1C79-43E9-44FF-886F-1D1F7DA6997B".toLowerCase(),
+                1, 2);
+        IBeacon iBeacon3 = new IBeacon("DF7E1C79-43E9-44FF-886F-1D1F7DA6997C".toLowerCase(),
+                1, 3);
+        IBeacon iBeacon4 = new IBeacon("DF7E1C79-43E9-44FF-886F-1D1F7DA6997D".toLowerCase(),
+                1, 4);
+        iBeacons.add(iBeacon1);
+        iBeacons.add(iBeacon2);
+        iBeacons.add(iBeacon3);
+        iBeacons.add(iBeacon4);
+
+        didRangeBeaconsInRegion(iBeacons, null);
+
+        //IBeaconManager.setBeaconSimulator( new YourBeaconSimulatorClass() );
+        //((YourBeaconSimulatorClass) IBeaconManager.getBeaconSimulator()).createTimedSimulatedBeacons();
+
+    }
 
     private String email;
 
