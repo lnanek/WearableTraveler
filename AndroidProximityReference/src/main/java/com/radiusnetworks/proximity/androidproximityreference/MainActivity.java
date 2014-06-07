@@ -64,6 +64,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate hasFocus = " + hasWindowFocus());
+
+
         screenWaker = new ScreenWaker(this);
         IBeaconManager.LOG_DEBUG = true;
         super.onCreate(savedInstanceState);
@@ -72,6 +75,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         currentLocation = (TextView) findViewById(R.id.currentLocation);
         previousLocations = (TextView) findViewById(R.id.previousLocations);
         container = findViewById(R.id.container);
+
+
         iBeaconManager = IBeaconManager.getInstanceForApplication(this.getApplicationContext());
         iBeaconManager.bind(this);
     }
@@ -88,24 +93,51 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     }
 
     @Override
+    protected void onStart() {
+        Log.d(TAG, "onStart hasFocus = " + hasWindowFocus());
+
+        super.onStart();
+    }
+
+    @Override
     protected void onResume() {
+        Log.d(TAG, "onResume hasFocus = " + hasWindowFocus());
+
         super.onResume();
         screenWaker.onResume();
     }
 
     @Override
     protected void onPause() {
+        Log.d(TAG, "onPause hasFocus = " + hasWindowFocus());
+
         super.onPause();
         screenWaker.onPause();
     }
 
     @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop hasFocus = " + hasWindowFocus());
+
+        super.onStop();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        Log.d(TAG, "onWindowFocusChanged hasFocus = " + hasFocus);
+
+        super.onWindowFocusChanged(hasFocus);
+    }
+
+    @Override
     public void onDestroy() {
+        Log.d(TAG, "onDestroy hasFocus = " + hasWindowFocus());
+
         super.onDestroy();
         iBeaconManager.unBind(this);
     }
 
-    final Gson gson = new Gson();
+    //final Gson gson = new Gson();
 
     @Override
     public void didRangeBeaconsInRegion(Collection<IBeacon> iBeacons, Region region) {
