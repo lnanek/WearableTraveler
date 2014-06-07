@@ -354,6 +354,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         super.onStart();
     }
 
+    private boolean resumedEver;
+
     @Override
     protected void onResume() {
         Log.d(TAG, "onResume hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
@@ -362,6 +364,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         screenWaker.onResume();
 
         resumed = true;
+        resumedEver = true;
         startTimerIfResumedAndFocused();
     }
 
@@ -370,6 +373,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         Log.d(TAG, "onPause hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
 
         super.onPause();
+        resumed = false;
         screenWaker.onPause();
     }
 
@@ -378,6 +382,10 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         Log.d(TAG, "onStop hasFocus = " + hasWindowFocus() + ", firstDrawComplete = " + firstDrawComplete);
 
         super.onStop();
+
+        if (!isFinishing() && resumedEver) {
+            finish();
+        }
     }
 
     @Override
@@ -541,6 +549,12 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                         tapsThisBeacon = 0;
                         mAudioManager.playSoundEffect(Sounds.SUCCESS);
                         currentBeacon = foundHackathonBeacon;
+
+                        final Toast toast = Toast.makeText(MainActivity.this,
+                                "Detected " + foundHackathonBeacon.name(),
+                                Toast.LENGTH_SHORT);
+                        toast.setGravity(Gravity.BOTTOM, 0, 0);
+                        toast.show();
 
                     }
                     updateBackground();

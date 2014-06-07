@@ -19,7 +19,10 @@ import com.radiusnetworks.proximity.ibeacon.startup.BootstrapNotifier;
 /**
  * Created by dyoung on 12/13/13.
  */
-public class AndroidProximityReferenceApplication extends Application implements BootstrapNotifier {
+public class AndroidProximityReferenceApplication extends Application /*implements BootstrapNotifier*/ {
+
+/*
+
     private static final String TAG = "AndroidProximityReferenceApplication";
     private RegionBootstrap regionBootstrap;
     private BackgroundPowerSaver backgroundPowerSaver;
@@ -96,5 +99,7 @@ public class AndroidProximityReferenceApplication extends Application implements
                 (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(1, builder.build());
     }
+
+*/
 
 }
