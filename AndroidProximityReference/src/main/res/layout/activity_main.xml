@@ -1,76 +1,115 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity"
-    tools:ignore="MergeRootFrame"
-    android:keepScreenOn="true"
     android:background="@drawable/bg_home"
-    >
+    android:keepScreenOn="true"
+    tools:context=".MainActivity"
+    tools:ignore="MergeRootFrame">
 
-    <EditText
-        android:id="@+id/username"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal|top"
-        android:text="Michael Jordan"
-        android:enabled="false"
-        android:focusable="false"
-        android:focusableInTouchMode="false"
-        />
+    <LinearLayout
+        android:id="@+id/contentScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/currentLocation"
-        android:layout_below="@id/username"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal|top"
-        android:text="Current Location: " />
-
-    <TextView
-        android:id="@+id/previousLocations"
-        android:layout_below="@id/currentLocation"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal|top"
-        android:text="Previous Locations: " />
-
-    <TextView
-        android:id="@+id/title"
-        android:layout_below="@id/previousLocations"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal|top"
-        android:text="Visible iBeacons: " />
-
-    <ScrollView
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:layout_below="@id/title"
-        >
-
-        <TableLayout
-            android:id="@+id/beacon_table"
-            android:layout_width="fill_parent"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal">
+            android:orientation="horizontal">
 
-            <TableRow
-                android:layout_width="fill_parent"
-                android:layout_height="fill_parent"></TableRow>
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/upper_left_logo_glass" />
 
-            <TableRow
+            <View
+                android:layout_width="0px"
+                android:layout_height="0px"
+                android:layout_weight="1"
+
+                />
+
+            <TextView
+                android:id="@+id/countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3:00"
+                android:textColor="#FFF" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <RelativeLayout
+        android:id="@+id/debugScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#55000000"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/username"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|top"
+            android:enabled="false"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:text="Michael Jordan" />
+
+        <TextView
+            android:id="@+id/currentLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/username"
+            android:layout_gravity="center_horizontal|top"
+            android:text="Current Location: " />
+
+        <TextView
+            android:id="@+id/previousLocations"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/currentLocation"
+            android:layout_gravity="center_horizontal|top"
+            android:text="Previous Locations: " />
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/previousLocations"
+            android:layout_gravity="center_horizontal|top"
+            android:text="Visible iBeacons: " />
+
+        <ScrollView
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_below="@id/title">
+
+            <TableLayout
+                android:id="@+id/beacon_table"
                 android:layout_width="fill_parent"
-                android:layout_height="fill_parent">
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal">
 
                 <TableRow
-                    android:id="@+id/beacon_row"
                     android:layout_width="fill_parent"
-                    android:layout_height="fill_parent"
-                    android:layout_column="0"></TableRow>
-            </TableRow>
+                    android:layout_height="fill_parent"></TableRow>
 
-        </TableLayout>
-    </ScrollView>
-</RelativeLayout>
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent">
+
+                    <TableRow
+                        android:id="@+id/beacon_row"
+                        android:layout_width="fill_parent"
+                        android:layout_height="fill_parent"
+                        android:layout_column="0"></TableRow>
+                </TableRow>
+
+            </TableLayout>
+        </ScrollView>
+    </RelativeLayout>
+</FrameLayout>

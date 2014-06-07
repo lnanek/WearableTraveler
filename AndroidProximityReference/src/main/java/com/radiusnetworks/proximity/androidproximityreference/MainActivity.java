@@ -19,6 +19,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.os.Build;
+import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -64,9 +65,14 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     Map<String, TableRow> rowMap = new HashMap<String, TableRow>();
 
     private View container;
+    private View logo;
     private EditText username;
     private TextView currentLocation;
     private TextView previousLocations;
+
+    private View debugScreen;
+    private TextView countdown;
+    private View contentScreen;
 
     private String previousLocationsString = "";
 
@@ -88,6 +94,10 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     private AudioManager mAudioManager;
 
+    private static final int DEPARTURE_DELAY_MS = 3 * 60 * 1000;
+
+    private Long timeStartUptimeMillis;
+
     private DetectorListener detectorListener = new DetectorListener() {
         @Override
         public void onSwipeDownOrBack() {
@@ -106,7 +116,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         public void onSwipeBackOrVolumeDown() {
             Log.d(TAG, "onSwipeBackOrVolumeDown");
 
-            startSimulation();
+            contentScreen.setVisibility(View.GONE);
+            debugScreen.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -174,9 +185,19 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             username.setText("Dave-eroo Martinez");
         }
 
+        debugScreen = findViewById(R.id.debugScreen);
+        contentScreen = findViewById(R.id.contentScreen);
+        countdown = (TextView) findViewById(R.id.countdown);
         currentLocation = (TextView) findViewById(R.id.currentLocation);
         previousLocations = (TextView) findViewById(R.id.previousLocations);
         container = findViewById(R.id.container);
+        logo = findViewById(R.id.logo);
+        logo.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener() {
+            @Override
+            public void onDraw() {
+                onDraw();
+            }
+        });
 
 
         iBeaconManager = IBeaconManager.getInstanceForApplication(this.getApplicationContext());
@@ -221,6 +242,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         return super.dispatchKeyEvent(event);
     }
 
+    
+
     @Override
     public void onIBeaconServiceConnect() {
         Region region = new Region("MainActivityRanging", null, null, null);
@@ -230,6 +253,10 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+    }
+
+    protected void onDraw() {
+        Log.d(TAG, "onDraw hasFocus = " + hasWindowFocus());
     }
 
     @Override
@@ -493,6 +520,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     @Override
     public void onInit(int status) {
+        Log.d(TAG, "onInit");
 
         if (status == TextToSpeech.SUCCESS) {
 
@@ -514,6 +542,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
 
     private void speakOut() {
+        Log.d(TAG, "speakOut");
 
         String text = "Welcome Michael";
         //String text = txtText.getText().toString();
