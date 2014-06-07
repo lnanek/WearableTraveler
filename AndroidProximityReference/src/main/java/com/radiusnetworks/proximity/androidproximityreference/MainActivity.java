@@ -136,16 +136,25 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         public void onTwoTap() {
             Log.d(TAG, "onTwoTap");
 
-            startSimulation();
+            //startSimulation();
         }
     };
+
+    private int simulatedBeaconIndex = 0;
 
     public void startSimulation() {
         Toast.makeText(MainActivity.this, "Using simulator...", Toast.LENGTH_LONG).show();
 
         ArrayList<IBeacon> iBeacons = new ArrayList<IBeacon>();
-        IBeacon iBeacon1 = new IBeacon(HackathonBeacon.CHECK_IN.mUuid,
-                HackathonBeacon.CHECK_IN.mMajor, HackathonBeacon.CHECK_IN.mMinor);
+
+        final HackathonBeacon simulatedBeacon = HackathonBeacon.values()[simulatedBeaconIndex];
+        IBeacon iBeacon1 = new IBeacon(simulatedBeacon.mUuid,
+                simulatedBeacon.mMajor, simulatedBeacon.mMinor);
+        simulatedBeaconIndex++;
+        if ( simulatedBeaconIndex >= HackathonBeacon.values().length) {
+            simulatedBeaconIndex = 0;
+        }
+
 
         IBeacon iBeacon2 = new IBeacon("DF7E1C79-43E9-44FF-886F-1D1F7DA6997B".toLowerCase(),
                 1, 2);
@@ -604,7 +613,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     }
 
-    private static final boolean USE_SPEECH = false;
+    private static final boolean USE_SPEECH = true;
 
     private void speakOut() {
         Log.d(TAG, "speakOut");
