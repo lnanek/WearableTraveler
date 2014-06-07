@@ -53,6 +53,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+/** BUGFIX **/
+
 public class MainActivity extends FragmentActivity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier {
 
     /** HUH MODIFICATIONS _____________________________________________________________________  **/
