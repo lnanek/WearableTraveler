@@ -38,6 +38,8 @@ dependencies {
 
     //compile 'com.radiusnetworks:AndroidIBeaconLibrary:0.7.1@aar'
 
+    compile 'com.squareup.picasso:picasso:+'
+
     compile 'com.google.code.gson:gson:2.2.+'
 }
 

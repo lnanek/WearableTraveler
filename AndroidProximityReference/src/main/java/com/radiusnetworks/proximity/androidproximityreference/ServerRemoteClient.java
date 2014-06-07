@@ -35,11 +35,16 @@ public class ServerRemoteClient {
 
     public static final Handler uiHandler = new Handler();
 
+    public static interface ServerRemoteClientListener {
+        public void onServerUpdated();
+        public void onServerUpdateError();
+    }
+
     public static void updateServer(
             final String username,
             final String email,
             final List<DetectedBeacon> detectedBeaconList,
-            final MainActivity activity) {
+            final ServerRemoteClientListener activity) {
         Log.d(TAG, "updateServer");
 
         final Thread thread = new Thread(new Runnable() {
@@ -56,7 +61,7 @@ public class ServerRemoteClient {
             final String username,
             final String email,
             final List<DetectedBeacon> detectedBeaconList,
-            final MainActivity activity) {
+            final ServerRemoteClientListener activity) {
         Log.d(TAG, "updateServerOnSecondThread");
 
         HttpClient httpclient = new DefaultHttpClient();

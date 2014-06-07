@@ -12,6 +12,7 @@ import android.os.RemoteException;
 import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -51,7 +52,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier,
- TextToSpeech.OnInitListener {
+ TextToSpeech.OnInitListener, ServerRemoteClient.ServerRemoteClientListener {
 
     public static final String TAG = "MainActivity";
 
@@ -143,11 +144,18 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
     private int simulatedBeaconIndex = 0;
 
     public void startSimulation() {
-        Toast.makeText(MainActivity.this, "Using simulator...", Toast.LENGTH_LONG).show();
 
         ArrayList<IBeacon> iBeacons = new ArrayList<IBeacon>();
 
         final HackathonBeacon simulatedBeacon = HackathonBeacon.values()[simulatedBeaconIndex];
+
+        final Toast toast = Toast.makeText(MainActivity.this,
+                "Selecting " + simulatedBeacon.name(),
+                Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.BOTTOM, 0, 0);
+        toast.show();
+
+
         IBeacon iBeacon1 = new IBeacon(simulatedBeacon.mUuid,
                 simulatedBeacon.mMajor, simulatedBeacon.mMinor);
         simulatedBeaconIndex++;
@@ -425,9 +433,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         }
 
         if (!detectedBeaconList.isEmpty()) {
-            Log.d(TAG, "updating server...");
-            Toast.makeText(MainActivity.this,
-                    "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
+            Log.d(TAG, "updating server " + (updateCount++));
+            //Toast.makeText(MainActivity.this,
+            //        "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
             ServerRemoteClient.updateServer(username.getText().toString(),
                     email,
                     detectedBeaconList,
