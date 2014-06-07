@@ -75,6 +75,8 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
 
     private Detector swipes;
 
+    private int tapsThisBeacon = 0;
+
     private DetectorListener detectorListener = new DetectorListener() {
         @Override
         public void onSwipeDownOrBack() {
@@ -95,6 +97,9 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         @Override
         public void onTap() {
             Log.d(TAG, "onTap");
+
+            tapsThisBeacon++;
+            updateBackground();
         }
     };
 
@@ -253,6 +258,26 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         return "UNKNOWN";
     }
 
+    public void updateBackground() {
+        if (HackathonBeacon.CHECK_IN == currentBeacon) {
+            container.setBackgroundResource(R.drawable.bg_checkin2);
+
+        } else if (HackathonBeacon.PARKING == currentBeacon) {
+            container.setBackgroundResource(
+                    tapsThisBeacon == 0 ? R.drawable.bg_parking : R.drawable.bg_parking2);
+
+        } else if (HackathonBeacon.GATE_A22 == currentBeacon) {
+            container.setBackgroundResource(R.drawable.bg_gate);
+
+        } else if (HackathonBeacon.SECURITY == currentBeacon) {
+            container.setBackgroundResource(
+                    tapsThisBeacon == 0 ? R.drawable.bg_security : R.drawable.bg_security2);
+
+        } else if (HackathonBeacon.CLUB == currentBeacon) {
+            container.setBackgroundResource(R.drawable.bg_club);
+        }
+    }
+
     public void updateFields(
             final HackathonBeacon foundHackathonBeacon,
             final IBeacon beacon) {
@@ -271,35 +296,18 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
             public void run() {
                 if (!sameHackathonBeacon || !sameDistance) {
 
-                    if (HackathonBeacon.CHECK_IN == foundHackathonBeacon) {
-                        container.setBackgroundResource(R.drawable.bg_checkin2);
-
-                    } else if (HackathonBeacon.PARKING == foundHackathonBeacon) {
-                        container.setBackgroundResource(R.drawable.bg_parking);
-
-                    } else if (HackathonBeacon.GATE_A22 == foundHackathonBeacon) {
-                        container.setBackgroundResource(R.drawable.bg_gate);
-
-                    } else if (HackathonBeacon.SECURITY == foundHackathonBeacon) {
-                        container.setBackgroundResource(R.drawable.bg_security);
-
-                    } else if (HackathonBeacon.CLUB == foundHackathonBeacon) {
-                        container.setBackgroundResource(R.drawable.bg_club);
-                    }
-
-
-
-
                     if (!sameHackathonBeacon) {
                         previousLocations.setText(previousLocations.getText() + " " + foundHackathonBeacon);
                         previousLocationsString = previousLocationsString + " " + foundHackathonBeacon;
+                        tapsThisBeacon = 0;
                     }
                     currentBeacon = foundHackathonBeacon;
+                    updateBackground();
 
                     currentLocation.setText(
-                            "Current location: " + foundHackathonBeacon
-                            + "\nDistance: " + beacon.getAccuracy()
-                                    + "\nProximity: " + getProximityString(beacon.getProximity()));
+                            "Current: " + foundHackathonBeacon
+                            + " (" + beacon.getAccuracy()
+                                    + " " + getProximityString(beacon.getProximity())+ ")");
                     previousDistance = beacon.getAccuracy();
                 }
             }
