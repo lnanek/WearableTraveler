@@ -24,8 +24,8 @@ public class AVIPWeather {
         arrivalName = "Minneapolis-St. Paul, Minnesota";
         destCurrentWeather = "Sunny";
         arriveCurrentWeather = "Partly Cloudy";
-        currentTemp = "63° F";
-        arrivalTemp = "56° F";
+        currentTemp = "63Â° F";
+        arrivalTemp = "56Â° F";
     }
 
     /** GET METHODS **/

@@ -53,8 +53,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-/** BUGFIX **/
-
 public class MainActivity extends FragmentActivity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier {
 
     /** HUH MODIFICATIONS _____________________________________________________________________  **/
@@ -458,7 +456,7 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
         new CountDownTimer(1800000, 1000) {
 
             public void onTick(long millisUntilFinished) {
-               departureTime.setText("0:" + millisUntilFinished / 1000 / 60);
+                departureTime.setText("0:" + millisUntilFinished / 1000 / 60);
             }
 
             public void onFinish() {
@@ -696,7 +694,7 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
 
                     currentLocation.setText(
                             "Current location: " + foundHackathonBeacon
-                            + "\nDistance: " + beacon.getAccuracy()
+                                    + "\nDistance: " + beacon.getAccuracy()
                                     + "\nProximity: " + getProximityString(beacon.getProximity()));
                     previousDistance = beacon.getAccuracy();
                 }

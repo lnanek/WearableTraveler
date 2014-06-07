@@ -212,7 +212,7 @@
             android:background="@android:color/transparent">
 
 
-            </LinearLayout>
+        </LinearLayout>
 
     </FrameLayout>
 

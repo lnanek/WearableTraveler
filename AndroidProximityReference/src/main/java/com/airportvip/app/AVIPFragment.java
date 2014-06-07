@@ -158,13 +158,4 @@ public class AVIPFragment extends Fragment implements MainActivity.OnRefreshSele
         Picasso.with(this.getActivity()).load(backgroundID).noFade().into(backgroundImage);
 
     }
-
-    /** INTERFACE FUNCTIONALITY ________________________________________________________________ **/
-
-    /*
-    public interface OnFragmentSelectedListener{
-
-        public void updateActivity();
-    }
-    */
 }
