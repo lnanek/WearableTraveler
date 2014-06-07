@@ -16,17 +16,22 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
 import android.os.Handler;
 import android.util.Log;
 
+import com.google.gson.Gson;
+
 public class ServerRemoteClient {
 
     private static final String TAG = ServerRemoteClient.class.getSimpleName();
 
     private static final String URL = "http://gpop-server.com/american-airlines/post.php";
+
+    private static final Gson gson = new Gson();
 
     public static final Handler uiHandler = new Handler();
 
@@ -48,6 +53,67 @@ public class ServerRemoteClient {
         });
         thread.start();
 
+    }
+
+    public static void updateServer(
+            final String username,
+            final List<DetectedBeacon> detectedBeaconList,
+            final MainActivity activity) {
+        Log.d(TAG, "updateServer");
+
+        final Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                updateServerOnSecondThread(username, detectedBeaconList, activity);
+            }
+        });
+        thread.start();
+
+    }
+
+    private static void updateServerOnSecondThread(
+            final String username,
+            final List<DetectedBeacon> detectedBeaconList,
+            final MainActivity activity) {
+        Log.d(TAG, "updateServerOnSecondThread");
+
+        HttpClient httpclient = new DefaultHttpClient();
+        HttpPost httpMethod = new HttpPost(URL
+                + "?username=" + encodeValue(username)
+        );
+        HttpResponse response;
+        try {
+
+            final String json = gson.toJson(detectedBeaconList);
+            final StringEntity jsonEntity = new StringEntity(json);
+            httpMethod.setEntity(jsonEntity);
+            httpMethod.setHeader("Content-Type", "application/json");
+
+            Log.d(TAG, "json = " + json);
+
+
+            response = httpclient.execute(httpMethod);
+            Log.d(TAG, "response status: " + response.getStatusLine().toString());
+            HttpEntity entity = response.getEntity();
+
+            uiHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    activity.onServerUpdated();
+                }
+            });
+
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error downloading items", e);
+
+            uiHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    activity.onServerUpdateError();
+                }
+            });
+        }
     }
 
     private static void updateServerOnSecondThread(

@@ -19,6 +19,8 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import com.radiusnetworks.ibeacon.IBeacon;
 import com.radiusnetworks.ibeacon.IBeaconConsumer;
@@ -31,6 +33,8 @@ import com.radiusnetworks.proximity.ibeacon.IBeaconManager;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends Activity implements IBeaconConsumer, RangeNotifier, IBeaconDataNotifier {
@@ -85,19 +89,46 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
         iBeaconManager.unBind(this);
     }
 
+    final Gson gson = new Gson();
+
     @Override
     public void didRangeBeaconsInRegion(Collection<IBeacon> iBeacons, Region region) {
+
+        //final String json = gson.toJson(iBeacons);
+        //Log.d(TAG, "didRangeBeaconsInRegion json = " + json);
+
+        Log.d(TAG, "didRangeBeaconsInRegion");
+
+        final List<DetectedBeacon> detectedBeaconList = new LinkedList<DetectedBeacon>();
         for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
+
+
+
             Log.d(TAG, "I see an iBeacon: " + iBeacon.getProximityUuid() + "," + iBeacon.getMajor() + "," + iBeacon.getMinor());
 
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
+            if ( null != foundHackathonBeacon ) {
+                detectedBeaconList.add(new DetectedBeacon(iBeacon));
+            }
+
             String displayString = iBeacon.getProximityUuid() + " " + iBeacon.getMajor() + " " + iBeacon.getMinor()
                     + (null == foundHackathonBeacon ? "" : "\n Hackathon beacon: " + foundHackathonBeacon.name());
 
             updateServerAndFields(foundHackathonBeacon, iBeacon);
 
             displayTableRow(iBeacon, displayString, false);
+        }
+
+        if (!detectedBeaconList.isEmpty()) {
+            Log.d(TAG, "updating server...");
+            Toast.makeText(MainActivity.this,
+                    "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
+            ServerRemoteClient.updateServer(username.getText().toString(),
+                    detectedBeaconList,
+                    MainActivity.this);
+        } else {
+            Log.d(TAG, "nothing found. not updating server...");
         }
     }
 
@@ -142,6 +173,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                                     + "\nProximity: " + getProximityString(beacon.getProximity()));
                     previousDistance = beacon.getAccuracy();
 
+                    /*
                     Log.d(TAG, "updating server...");
                     Toast.makeText(MainActivity.this,
                             "Updating server " + (updateCount++), Toast.LENGTH_LONG).show();
@@ -151,7 +183,7 @@ public class MainActivity extends Activity implements IBeaconConsumer, RangeNoti
                             beacon.getAccuracy(),
                             getProximityString(beacon.getProximity()),
                             MainActivity.this);
-
+                    */
                 }
             }
         });
