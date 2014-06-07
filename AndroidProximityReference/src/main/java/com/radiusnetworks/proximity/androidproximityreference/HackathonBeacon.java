@@ -14,9 +14,12 @@ public enum HackathonBeacon {
     CHECK_IN("114A4DD8-5B2F-4800-A079-BDCB21392BE9",1000,1031),
     SECURITY("114A4DD8-5B2F-4800-A079-BDCB21392BE9",1600,1231),
     CLUB("114A4DD8-5B2F-4800-A079-BDCB21392BE9",1500,1041),
+    //GATE_A22("114A4DD8-5B2F-4800-A079-BDCB21392BE9",4608,4645);
     GATE_A22("114A4DD8-5B2F-4800-A079-BDCB21392BE9",1200,1225);
 
     private static final String TAG = HackathonBeacon.class.getSimpleName();
+
+    private static final boolean LOG = false;
 
     public String mUuid;
 
@@ -45,7 +48,7 @@ public enum HackathonBeacon {
                 .getProximityUuid()
                 .replaceAll("-", "")
                 .toUpperCase();
-        Log.i(TAG, "Finding match for: " + cleanedIBeaconUuid
+        if ( LOG ) Log.i(TAG, "Finding match for: " + cleanedIBeaconUuid
         + ", major = " + iBeacon.getMajor()
         + ", minor = " + iBeacon.getMinor()
         );
@@ -53,7 +56,7 @@ public enum HackathonBeacon {
         for(HackathonBeacon hackathonBeacon : HackathonBeacon.values()) {
             final String cleanedHackathonUuid = hackathonBeacon.mUuid.replaceAll("-", "").toUpperCase();
 
-            Log.i(TAG, "Comparing against: " + cleanedHackathonUuid
+            if ( LOG ) Log.i(TAG, "Comparing against: " + cleanedHackathonUuid
                             + ", major = " + hackathonBeacon.mMajor
                             + ", minor = " + hackathonBeacon.mMinor
             );
@@ -61,12 +64,12 @@ public enum HackathonBeacon {
             if (cleanedHackathonUuid.equals(cleanedIBeaconUuid)
                     && hackathonBeacon.mMajor == iBeacon.getMajor()
                     && hackathonBeacon.mMinor == iBeacon.getMinor()) {
-                Log.i(TAG, "Found");
+                if ( LOG ) Log.i(TAG, "Found");
                 return hackathonBeacon;
             }
         }
 
-        Log.i(TAG, "Not Found");
+        if ( LOG ) Log.i(TAG, "Not Found");
         return null;
     }
 

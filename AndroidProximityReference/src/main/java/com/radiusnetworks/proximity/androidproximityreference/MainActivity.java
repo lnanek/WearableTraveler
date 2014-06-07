@@ -593,8 +593,8 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
         screenWaker = new ScreenWaker(this);
         IBeaconManager.LOG_DEBUG = LOG;
 
-        Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD);
-        Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD);
+        if ( LOG ) Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_BETWEEN_SCAN_PERIOD);
+        if ( LOG ) Log.d(TAG, "IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD: " + IBeaconManager.DEFAULT_FOREGROUND_SCAN_PERIOD);
 
         super.onCreate(savedInstanceState);
 
@@ -677,11 +677,13 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
         return super.dispatchTouchEvent(ev);
     }
 
+    private static final boolean DETECT_ALL = false;
+
     @Override
     public void onIBeaconServiceConnect() {
         Region region = new Region(
                 "MainActivityRanging",
-                "114A4DD8-5B2F-4800-A079-BDCB21392BE9",
+                DETECT_ALL ? null : "114A4DD8-5B2F-4800-A079-BDCB21392BE9",
                 null,
                 null);
         try {
@@ -799,8 +801,15 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
         boolean found = false;
         for (IBeacon iBeacon : iBeacons) {
             iBeacon.requestData(this);
-            Log.d(TAG, "I see an iBeacon: " + iBeacon.getProximityUuid() + "," + iBeacon.getMajor() + "," + iBeacon.getMinor());
+
             final HackathonBeacon foundHackathonBeacon = HackathonBeacon.findMatching(iBeacon);
+
+            if ( DETECT_ALL || LOG ) Log.d(TAG, "Beacon " + (null != foundHackathonBeacon ? foundHackathonBeacon.name() : "UNKNOWN")
+                    + " " + iBeacon.getProximityUuid() + ","
+                    + iBeacon.getMajor() + ","
+                    + iBeacon.getMinor() + " at "
+                    + iBeacon.getAccuracy());
+
             if (null != foundHackathonBeacon) {
                 found = true;
                 foundHackathonBeacon.proximity = HackathonBeacon.getProximityString(iBeacon.getProximity());
@@ -822,7 +831,7 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
                     email,
                     MainActivity.this);
         } else {
-            Log.d(TAG, "nothing found. not updating server...");
+            if ( LOG ) Log.d(TAG, "nothing found. not updating server...");
         }
     }
 
@@ -900,12 +909,12 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
         }
 
 
-        Log.d(TAG, "getNearest returning = " + closestBeacon);
+        if ( LOG ) Log.d(TAG, "getNearest returning = " + closestBeacon);
         return closestBeacon;
     }
 
     public void updateCurrentLocation() {
-        Log.d(TAG, "updateCurrentLocation");
+        if ( LOG ) Log.d(TAG, "updateCurrentLocation");
 
         HackathonBeacon nearestCandidate = getNearest(new Long(15 * 1000));
         //if ( null == nearestCandidate ) {
@@ -956,7 +965,7 @@ public class MainActivity extends FragmentActivity implements IBeaconConsumer, R
 
     @Override
     public void iBeaconDataUpdate(IBeacon iBeacon, IBeaconData iBeaconData, DataProviderException e) {
-        Log.i(TAG, "iBeaconDataUpdate");
+        if ( LOG ) Log.i(TAG, "iBeaconDataUpdate");
     }
 
     private void updateDebugDisplay() {
